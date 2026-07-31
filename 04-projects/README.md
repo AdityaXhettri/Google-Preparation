@@ -61,3 +61,7 @@
 - Anshul Garg's repo: Kafka, gRPC, Spring Boot projects → study **patterns**, not solutions
 - Awesome GitHub repos for backend systems
 - Engineering blogs: Uber, Yelp, Stripe, Cloudflare
+
+- ## Goal
+- 1 project every 4-6 weeks
+- Each must be **deployable + documented + interview-ready**
