@@ -34,10 +34,6 @@
 - [ ] Projects: 3 deployable projects with architecture docs
 - [ ] Resume: tailored to L4 with quantified bullets
 
-## Inspiration (study, don't copy)
-
-- [Anshul Garg's google-interview-prep](https://github.com/anshul-garg27/google-interview-prep) — real project code (Kafka, gRPC, Spring Boot), system design writeups
-- (Add more as I find them)
 
 ## Principles
 1. **Patterns over problems** — learn the pattern, not the answer
