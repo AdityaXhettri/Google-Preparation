@@ -35,8 +35,4 @@
 - [ ] Resume: tailored to L4 with quantified bullets
 
 
-## Principles
-1. **Patterns over problems** — learn the pattern, not the answer
-2. **Build, don't just read** — every concept gets coded / written
-3. **Own your stories** — behavioral answers must be 100% true
-4. **Slow is fast** — depth > rushing through topics
+
