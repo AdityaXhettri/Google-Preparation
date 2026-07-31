@@ -35,5 +35,17 @@
 | 17 | Bit Manipulation | ☐ | ☐ | ☐ |
 | 18 | Math & Geometry | ☐ | ☐ | ☐ |
 
+
+## How I approach a problem
+1. Read problem, restate it in my own words (2 min)
+2. Think of brute force, mention trade-offs (3 min)
+3. Identify pattern, propose optimal (5 min)
+4. Code cleanly (15-20 min)
+5. Test with edge cases (5 min)
+
+## Resources I'm using
+- (Fill in: LeetCode/NeetCode 150? Blind 75? AlgoExpert?)
+
+## Daily target
 - 2-3 problems/day on weekdays, 4-5 on weekends
 - Pattern-first, not problem-first
