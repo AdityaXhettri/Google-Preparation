@@ -37,8 +37,3 @@
 5. **Bottlenecks & trade-offs** (8 min) — what breaks first? how to mitigate?
 6. **Wrap up** (5 min) — summary, future work
 
-## Resources
-- (Fill in: Alex Xu's books? educative.io? YouTube?)
-
-## Inspiration
-- Anshul Garg's repo has real project source code (Kafka, gRPC, Spring Boot) — study patterns, not solutions.
