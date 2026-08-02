@@ -137,3 +137,10 @@ Always cover these layers:
 | gRPC vs REST | Speed/typing vs simplicity/tooling |
 | Polling vs push | Battery/latency vs server cost |
 
+## Common mistakes
+
+1. **Jumping to design without clarifying** — interview is failed
+2. **Over-engineering** — MVP first, mention what you'd add later
+3. **Ignoring bottlenecks** — always ask "what breaks first at 10x?"
+4. **No numbers** — back claims with scale estimates
+5. **Not discussing trade-offs** — show you know the alternatives
