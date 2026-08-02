@@ -31,6 +31,7 @@ export type Attempt = {
   finishedAt?: number;
   solved: boolean;
   retries: number;
+  hintsUsed?: number;
   notes?: string;
 };
 
@@ -55,7 +56,12 @@ export type SystemDesignAttempt = {
   checklistScore?: number;
 };
 
+export type HintMsg = { role: "user" | "assistant"; content: string; ts: number };
+export type HintStat = { count: number; lastUsed: number };
+export type SR = { lastSolved: number; nextDue: number; interval: number; reviewCount: number };
+
 export const storage = {
+  // ---- DSA attempts ----
   getAttempts: (): Attempt[] => get("attempts", []),
   addAttempt: (a: Attempt) => set("attempts", [...storage.getAttempts(), a]),
   updateAttempt: (id: string, patch: Partial<Attempt>) => {
@@ -64,6 +70,8 @@ export const storage = {
     if (idx >= 0) all[idx] = { ...all[idx], ...patch };
     set("attempts", all);
   },
+
+  // ---- Notes read ----
   getReadNotes: (): ReadNote[] => get("readNotes", []),
   markRead: (path: string) => {
     const all = storage.getReadNotes();
@@ -73,12 +81,18 @@ export const storage = {
   },
   isRead: (path: string): boolean =>
     storage.getReadNotes().some((r) => r.path === path),
+
+  // ---- Behavioral ----
   getBehavioral: (): BehavioralAttempt[] => get("behavioral", []),
   addBehavioral: (b: BehavioralAttempt) =>
     set("behavioral", [...storage.getBehavioral(), b]),
+
+  // ---- System design ----
   getSystemDesign: (): SystemDesignAttempt[] => get("systemDesign", []),
   addSystemDesign: (s: SystemDesignAttempt) =>
     set("systemDesign", [...storage.getSystemDesign(), s]),
+
+  // ---- Streak ----
   getStreak: (): { current: number; lastDay: string } =>
     get("streak", { current: 0, lastDay: "" }),
   recordActivity: () => {
@@ -90,5 +104,40 @@ export const storage = {
     const next = { current: newCurrent, lastDay: today };
     set("streak", next);
     return next;
+  },
+
+  // ---- Hint sessions (per-problem chat with hint bot) ----
+  getHints: (problemId: string): HintMsg[] => get(`hints_${problemId}`, []),
+  saveHints: (problemId: string, msgs: HintMsg[]) => set(`hints_${problemId}`, msgs),
+
+  // ---- Hint usage counter (signal of difficulty) ----
+  getHintStats: (problemId: string): HintStat => get(`hintstats_${problemId}`, { count: 0, lastUsed: 0 }),
+  bumpHint: (problemId: string) => {
+    const cur = storage.getHintStats(problemId);
+    set(`hintstats_${problemId}`, { count: cur.count + 1, lastUsed: Date.now() });
+  },
+
+  // ---- Spaced repetition ----
+  // First review in 1 day, then 3, 7, 30 days
+  getSR: (problemId: string): SR => get(`sr_${problemId}`, { lastSolved: 0, nextDue: 0, interval: 0, reviewCount: 0 }),
+  scheduleSR: (problemId: string): SR => {
+    const cur = storage.getSR(problemId);
+    const intervals = [1, 3, 7, 30];
+    const nextInterval = cur.reviewCount < intervals.length ? intervals[cur.reviewCount] : 30;
+    const next: SR = {
+      lastSolved: Date.now(),
+      nextDue: Date.now() + nextInterval * 86_400_000,
+      interval: nextInterval,
+      reviewCount: cur.reviewCount + 1,
+    };
+    set(`sr_${problemId}`, next);
+    return next;
+  },
+  dueProblems: (allProblemIds: string[]): string[] => {
+    const now = Date.now();
+    return allProblemIds.filter((id) => {
+      const sr = storage.getSR(id);
+      return sr.lastSolved > 0 && sr.nextDue <= now;
+    });
   },
 };

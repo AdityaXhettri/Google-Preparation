@@ -7,6 +7,7 @@ const NAV = [
   { to: "/study", label: "Study Notes", icon: "📚" },
   { to: "/practice/system-design", label: "System Design", icon: "🏗️" },
   { to: "/practice/behavioral", label: "Behavioral", icon: "🎤" },
+  { to: "/mock", label: "Mock Interview", icon: "🎤" },
   { to: "/chat", label: "Chat", icon: "💬" },
 ];
 

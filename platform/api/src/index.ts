@@ -47,6 +47,58 @@ app.post("/api/chat", async (c) => {
   }
 });
 
+// ---- /api/hint ----
+// Socratic hint bot for a specific problem. Never gives the answer.
+app.post("/api/hint", async (c) => {
+  if (!genAI) {
+    return c.json({ error: "GEMINI_API_KEY not configured" }, 500);
+  }
+
+  try {
+    const body = await c.req.json().catch(() => null) as {
+      problemTitle?: string;
+      problemDescription?: string;
+      pattern?: string;
+      difficulty?: string;
+      userQuestion?: string;
+      history?: { role: "user" | "assistant"; content: string }[];
+    } | null;
+
+    if (!body?.problemTitle || !body?.userQuestion) {
+      return c.json({ error: "problemTitle and userQuestion required" }, 400);
+    }
+
+    const sysPrompt = `You are a Socratic tutor for DSA coding interview prep. A student is working on the problem: "${body.problemTitle}" (pattern: ${body.pattern ?? "unknown"}, difficulty: ${body.difficulty ?? "medium"}).
+
+Problem description:
+${body.problemDescription ?? "(not provided)"}
+
+RULES (CRITICAL):
+- NEVER give the full solution or final answer
+- NEVER write working code
+- Ask clarifying questions to understand what the student has tried
+- Give progressive hints: questions, then technique names, then pseudocode (NOT real code)
+- Be encouraging and short (under 100 words)
+- If the student asks for the answer directly, refuse and instead ask what they've tried
+- Reference the problem context when possible`;
+
+    const historyText = (body.history ?? [])
+      .map((m) => `${m.role === "user" ? "Student" : "Tutor"}: ${m.content}`)
+      .join("\n");
+
+    const userMsg = historyText
+      ? `Conversation so far:\n${historyText}\n\nStudent: ${body.userQuestion}`
+      : `Student: ${body.userQuestion}`;
+
+    const result = await genAI.getGenerativeModel({ model: "gemini-1.5-flash", systemInstruction: sysPrompt })
+      .generateContent(userMsg);
+
+    return c.json({ hint: result.response.text() });
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : "hint failed" }, 500);
+  }
+});
+
 // ---- /api/note?path=... ----
 app.get("/api/note", async (c) => {
   const requestedPath = c.req.query("path");

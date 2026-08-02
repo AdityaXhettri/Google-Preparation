@@ -4,6 +4,7 @@ import { storage } from "../lib/storage";
 import { PROBLEMS, PATTERNS } from "../lib/problems";
 import { BEHAVIORAL, ATTRIBUTE_LABELS } from "../lib/behavioral";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { generateInsights, recommendNext, type Insight } from "../lib/recommendations";
 
 export function Dashboard() {
   const [mounted, setMounted] = useState(false);
@@ -14,16 +15,21 @@ export function Dashboard() {
     behavioralCount: 0,
     sdCount: 0,
   });
+  const [insights, setInsights] = useState<Insight[]>([]);
+  const [recommendations, setRecommendations] = useState<ReturnType<typeof recommendNext>>([]);
 
   useEffect(() => {
     setMounted(true);
-    setStats({
+    const all = {
       streak: storage.getStreak(),
       attempts: storage.getAttempts(),
       readCount: storage.getReadNotes().length,
       behavioralCount: storage.getBehavioral().length,
       sdCount: storage.getSystemDesign().length,
-    });
+    };
+    setStats(all);
+    setInsights(generateInsights());
+    setRecommendations(recommendNext(3));
   }, []);
 
   if (!mounted) return <div className="p-8 text-zinc-500">Loading…</div>;
@@ -51,6 +57,56 @@ export function Dashboard() {
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <p className="text-zinc-500 mt-1">Your Google L4 prep at a glance.</p>
       </header>
+
+      {/* Insights */}
+      {insights.length > 0 && (
+        <section className="mb-8">
+          <h2 className="text-lg font-semibold mb-3">💡 Insights for you</h2>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {insights.map((ins, i) => (
+              <div
+                key={i}
+                className="p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 hover:border-zinc-400 transition"
+              >
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">{ins.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm">{ins.title}</div>
+                    <div className="text-xs text-zinc-500 mt-1">{ins.description}</div>
+                    {ins.action && (
+                      <Link to={ins.action.href} className="inline-block mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                        {ins.action.label} →
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Recommendations */}
+      {recommendations.length > 0 && (
+        <section className="mb-8">
+          <h2 className="text-lg font-semibold mb-3">🎯 Recommended next</h2>
+          <div className="grid sm:grid-cols-3 gap-3">
+            {recommendations.map((p) => (
+              <Link
+                key={p.id}
+                to={`/practice/dsa?pattern=${p.pattern}&problem=${p.id}`}
+                className="p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 hover:border-zinc-400 transition"
+              >
+                <div className="text-xs text-zinc-500 uppercase">{p.pattern.replace(/^\d+-/, "")}</div>
+                <div className="font-semibold mt-1">{p.title}</div>
+                <div className="text-xs text-zinc-500 mt-1">
+                  {p.difficulty} · {p.optimalTime ?? "?"}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <StatCard label="Streak" value={`${stats.streak.current}d`} sub={stats.streak.lastDay || "—"} />
@@ -89,10 +145,11 @@ export function Dashboard() {
 
       <section className="mb-8">
         <h2 className="text-lg font-semibold mb-3">Quick Actions</h2>
-        <div className="grid md:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-4 gap-4">
           <QuickAction href="/practice/dsa" title="Solve a DSA problem" subtitle="Random problem, timed" emoji="💻" />
-          <QuickAction href="/practice/system-design" title="Practice system design" subtitle="45-min mock" emoji="🏗️" />
-          <QuickAction href="/practice/behavioral" title="Behavioral drill" subtitle="2-min STAR practice" emoji="🎤" />
+          <QuickAction href="/practice/system-design" title="System design" subtitle="45-min mock" emoji="🏗️" />
+          <QuickAction href="/practice/behavioral" title="Behavioral drill" subtitle="2-min STAR" emoji="🎤" />
+          <QuickAction href="/mock" title="Full mock interview" subtitle="75 min, all 3" emoji="🎯" />
         </div>
       </section>
 
