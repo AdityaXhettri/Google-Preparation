@@ -1,42 +1,56 @@
 # Google L4 Interview Prep — My Path
 
-> Personal prep tracker. Building my own way. Inspired by public repos but **everything here is my own work**.
+> Personal prep tracker. Built from scratch. All content is mine.
 
-## Repo Structure
+## Quick Start
+
+| Priority | Folder | Time | Purpose |
+|---|---|---|---|
+| 1 | `dsa-patterns/` | ongoing | Solve by-pattern, not by-problem |
+| 2 | `system-design/` | 1 hr/week | Classic problems + concepts |
+| 3 | `googleyness-stories/` | 2 hr/week | Build MY 6 STAR stories |
+| 4 | `projects/` | 4-6 weeks each | Real deployable work |
+| 5 | `behavioral/` | weekly | General STAR practice |
+| 6 | `interview-checklist/` | 1 week before | Last-minute review |
+
+## Folder Structure
 
 ```
-01-dsa/                    # Topic-wise DSA progress
-02-system-design/          # Classic problems + concept notes
-03-behavioral/             # STAR stories (my real experiences only)
-04-projects/               # Build 3-5 real projects (deployable + documented)
-05-language-fundamentals/  # Master one language deeply
+dsa-patterns/              ← 18 patterns, one folder each
+  01-sliding-window/       ← problems + my solutions + takeaways
+  02-two-pointers/
+  ...
+  18-trie/
+
+system-design/             ← Classic L4 design problems + concept notes
+googleyness-stories/       ← MY 6 Googleyness stories (mapped to MY projects)
+projects/                  ← 3-5 real deployable projects
+behavioral/                ← General behavioral Q&A practice
+interview-checklist/       ← Day-before templates
+resources/                 ← Links, books, videos I use
+scripts/                   ← Helper scripts (e.g., timed-mock-runner)
 ```
 
-## Weekly Cadence (explore mode, no hard timeline)
+## Inspiration (study, don't copy)
 
-| Day | Focus | Time |
-|---|---|---|
-| Mon | DSA (new topic) | 1.5 hr |
-| Tue | System Design (study concepts) | 1.5 hr |
-| Wed | DSA (problems on yesterday's topic) | 1.5 hr |
-| Thu | Project work | 2 hr |
-| Fri | DSA (mock problem, timed) | 1 hr |
-| Sat | System Design (1 problem write-up) | 2 hr |
-| Sun | Behavioral (1 story draft or polish) + review | 1 hr |
-
-**Total:** ~10-12 hrs/week. Adjust to your pace.
-
-## My Targets (TBD as I grow)
-
-- [ ] DSA: can solve Medium in 25 min, Hard in 40 min
-- [ ] System Design: can design 1 problem in 45 min, clear boxes-and-arrows
-- [ ] Behavioral: 6 polished STAR stories, rehearsed
-- [ ] Projects: 3 deployable projects with architecture docs
-- [ ] Resume: tailored to L4 with quantified bullets
-
+- [NeetCode 150](https://neetcode.io/) — DSA problem list
+- [Alex Xu — System Design Interview](https://www.amazon.com/System-Design-Interview-insider-guide/dp/B08CMF95C4) — design book
 
 ## Principles
+
 1. **Patterns over problems** — learn the pattern, not the answer
-2. **Build, don't just read** — every concept gets coded / written
-3. **Own your stories** — behavioral answers must be 100% true
-4. **Slow is fast** — depth > rushing through topics
+2. **My stories only** — never fake behavioral answers
+3. **Build, don't just read** — every concept gets coded / written
+4. **Slow is fast** — depth > rushing
+
+## Progress
+
+- [ ] 18 DSA patterns mastered (medium in 25 min, hard in 40 min)
+- [ ] 10 system design problems (45-min interview format)
+- [ ] 6 polished Googleyness stories
+- [ ] 3 deployable projects with docs
+- [ ] Resume tailored to L4
+
+---
+
+**Last updated:** _fill in date when you make changes_
