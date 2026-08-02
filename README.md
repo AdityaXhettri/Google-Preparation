@@ -57,10 +57,4 @@ scripts/                   ← Helper scripts (e.g., timed-mock-runner)
 
 ---
 
-**Last updated:** _fill in date when you make changes_
-=======
-2. **Build, don't just read** — every concept gets coded / written
-3. **Own your stories** — behavioral answers must be 100% true
-4. **Slow is fast** — depth > rushing through topics
 
->>>>>>> e0b48efdb4838177f8945f75dfc0d70b809b859b
