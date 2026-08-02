@@ -1,3 +1,12 @@
+# Projects — My portfolio (build these)
+
+> Goal: 3-5 real, deployable projects with docs. These become resume bullets AND interview talking points.
+
+## My stack
+- Frontend: React + Vite + TypeScript
+- Backend: Bun + Hono
+- Database: Postgres + Redis
+- Deploy: Vercel + Supabase
 
 ## Tier 1 — Must build (in order)
 
