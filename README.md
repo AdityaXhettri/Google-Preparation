@@ -33,12 +33,16 @@ scripts/                   ← Helper scripts (e.g., timed-mock-runner)
 
 ## Inspiration (study, don't copy)
 
+<<<<<<< HEAD
 - [NeetCode 150](https://neetcode.io/) — DSA problem list
 - [Alex Xu — System Design Interview](https://www.amazon.com/System-Design-Interview-insider-guide/dp/B08CMF95C4) — design book
 
+=======
+>>>>>>> e0b48efdb4838177f8945f75dfc0d70b809b859b
 ## Principles
 
 1. **Patterns over problems** — learn the pattern, not the answer
+<<<<<<< HEAD
 2. **My stories only** — never fake behavioral answers
 3. **Build, don't just read** — every concept gets coded / written
 4. **Slow is fast** — depth > rushing
@@ -54,3 +58,9 @@ scripts/                   ← Helper scripts (e.g., timed-mock-runner)
 ---
 
 **Last updated:** _fill in date when you make changes_
+=======
+2. **Build, don't just read** — every concept gets coded / written
+3. **Own your stories** — behavioral answers must be 100% true
+4. **Slow is fast** — depth > rushing through topics
+
+>>>>>>> e0b48efdb4838177f8945f75dfc0d70b809b859b
