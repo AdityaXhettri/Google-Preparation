@@ -1,29 +1,37 @@
-# Pattern 1: Sliding Window
+# 01. Sliding Window
 
 ## When to use
-- Contiguous subarray/substring problems
-- "Find longest/shortest subarray/substring with condition X"
-- Often involves: sum, count, distinct chars, max/min
 
-## Template (TypeScript)
+Sliding window is for problems on **contiguous subarrays or substrings** where you need to track some condition (sum, max, distinct chars, etc.) within a window. The window expands on the right and shrinks on the left.
+
+Recognize it when you see:
+- "Find longest/shortest subarray/substring with property X"
+- "Maximum sum of K consecutive elements"
+- "Contains at most K distinct characters"
+
+## How it works
+
+Two pointers (`left` and `right`) define the current window `[left, right]`. Move `right` to expand, and `left` to shrink when the window violates a condition. The answer is tracked as you go.
+
+## Template
 
 ```ts
-function slidingWindow(arr: number[], k: number): number {
+function slidingWindow(arr: number[]): number {
   let left = 0;
+  let windowState = 0;       // sum, count, map, etc.
   let result = 0;
-  let windowState = 0; // sum, count, map, etc.
 
   for (let right = 0; right < arr.length; right++) {
-    // 1. Add arr[right] to window
+    // 1. Add arr[right] to the window
     windowState += arr[right];
 
-    // 2. Shrink window while condition violated
-    while (windowConditionViolated(windowState, k)) {
+    // 2. Shrink while window is invalid
+    while (windowState > TARGET) {
       windowState -= arr[left];
       left++;
     }
 
-    // 3. Update result
+    // 3. Update result with current window
     result = Math.max(result, right - left + 1);
   }
 
@@ -31,22 +39,46 @@ function slidingWindow(arr: number[], k: number): number {
 }
 ```
 
-## Variations
-- **Fixed window** (size k): shrink when `right - left + 1 > k`
-- **Variable window** (dynamic): shrink while condition violated
-- **With hashmap**: e.g., longest substring with K distinct chars
+## Fixed vs Variable Window
 
-## Problem list (fill as I solve)
+**Fixed window** (size K):
+- Window size is constant. Shrink when `right - left + 1 > K`.
+- Example: max sum subarray of size K.
 
-| # | Problem | LeetCode # | Difficulty | Status | My file |
-|---|---|---|---|---|---|
-| 1 | Maximum Sum Subarray of Size K | 643 | Easy | ☐ | [problems/](./problems/) |
-| 2 | Longest Substring Without Repeating | 3 | Medium | ☐ | |
-| 3 | Longest Repeating Character Replacement | 424 | Medium | ☐ | |
-| 4 | Permutation in String | 567 | Medium | ☐ | |
-| 5 | Minimum Window Substring | 76 | Hard | ☐ | |
-| 6 | Sliding Window Maximum | 239 | Hard | ☐ | |
-| 7 | Substring with Concatenation of All Words | 30 | Hard | ☐ | |
+**Variable window**:
+- Window grows and shrinks based on condition.
+- Example: longest substring with at most K distinct chars.
 
-## My key takeaways
-_Fill after solving first few_
+## Common patterns
+
+| Sub-pattern | Example problem |
+|---|---|
+| Fixed K | LC 643 — Max sum subarray of size K |
+| Longest substring with constraint | LC 3 — Longest substring without repeating |
+| Counting | LC 438 — Anagram in string |
+| With hashmap | LC 76 — Minimum window substring |
+
+## Key insight
+
+The total time is O(n) because each element is added to the window once (when `right` reaches it) and removed once (when `left` passes it). Two pointers, linear time.
+
+## Common pitfalls
+
+1. **Off-by-one on `right - left + 1`**: when `left` and `right` are both inclusive, length is `right - left + 1`.
+2. **Forgetting to shrink**: always check if window is invalid after adding `arr[right]`.
+3. **Wrong order**: add first, shrink second, then update answer. Reversing these breaks the invariant.
+
+## Related patterns
+
+- **Two Pointers** — same idea but pointers move based on different logic
+- **Prefix Sum + Hashmap** — alternative for "subarray sum equals K" type problems
+
+## Practice problems (in order of difficulty)
+
+1. **Easy:** LC 643 — Maximum Average Subarray
+2. **Easy:** LC 219 — Contains Duplicate II
+3. **Medium:** LC 3 — Longest Substring Without Repeating Characters
+4. **Medium:** LC 567 — Permutation in String
+5. **Medium:** LC 438 — Find All Anagrams in a String
+6. **Hard:** LC 76 — Minimum Window Substring
+7. **Hard:** LC 239 — Sliding Window Maximum

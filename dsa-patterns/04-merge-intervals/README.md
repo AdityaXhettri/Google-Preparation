@@ -1,51 +1,65 @@
-# Pattern 4: Merge Intervals
+# 04. Merge Intervals
 
 ## When to use
-- Overlapping intervals
-- Meeting room scheduling
-- Range merging
-- Any problem involving [start, end] ranges
 
-## Template (TypeScript)
+Problems on **intervals** `[start, end]`. Common: merging overlapping intervals, scheduling, finding conflicts.
+
+## When to recognize
+
+- "Merge all overlapping intervals"
+- "Insert interval"
+- "Meeting rooms" (min number needed)
+- "Non-overlapping intervals" (max count after removing overlaps)
+
+## The key insight
+
+**Sort by start time**. Once sorted, overlapping intervals are adjacent. Sweep left to right.
+
+## Template — merge all overlapping
 
 ```ts
-function mergeIntervals(intervals: number[][]): number[][] {
-  // 1. Sort by start
+function merge(intervals: number[][]): number[][] {
+  if (intervals.length === 0) return [];
   intervals.sort((a, b) => a[0] - b[0]);
 
-  const merged: number[][] = [];
-  let current = intervals[0];
-
-  for (const next of intervals.slice(1)) {
-    if (next[0] <= current[1]) {
-      // Overlap — extend current
-      current[1] = Math.max(current[1], next[1]);
+  const merged: number[][] = [intervals[0]];
+  for (let i = 1; i < intervals.length; i++) {
+    const last = merged[merged.length - 1];
+    const curr = intervals[i];
+    if (curr[0] <= last[1]) {
+      // Overlap: extend end to max of both
+      last[1] = Math.max(last[1], curr[1]);
     } else {
-      // No overlap — push current, start new
-      merged.push(current);
-      current = next;
+      merged.push(curr);
     }
   }
-  merged.push(current);
   return merged;
 }
 ```
 
 ## Variations
-- **Merge overlapping** → combined result
-- **Insert interval** → add new interval into sorted list, then merge
-- **Intersect two lists** → common intervals
-- **Conflict detection** → can attend all meetings?
 
-## Problem list
+| Variation | Description |
+|---|---|
+| **Merge overlapping** | Combine into minimum non-overlapping set |
+| **Insert interval** | Add new interval into sorted list, then merge |
+| **Intersect two lists** | Find common overlap between two interval lists |
+| **Conflict detection** | Can attend all meetings? (sort + check adjacent) |
+| **Min meeting rooms** | Sweep line + max concurrent intervals |
+| **Non-overlapping** | Greedy: sort by end time, keep compatible intervals |
 
-| # | Problem | LeetCode # | Difficulty | Status |
-|---|---|---|---|---|
-| 1 | Merge Intervals | 56 | Medium | ☐ |
-| 2 | Insert Interval | 57 | Medium | ☐ |
-| 3 | Interval List Intersections | 986 | Medium | ☐ |
-| 4 | Meeting Rooms II | 253 | Medium | ☐ |
-| 5 | Non-overlapping Intervals | 435 | Medium | ☐ |
+## Common pitfalls
 
-## My key takeaways
-_Fill after solving_
+1. **Off-by-one on overlap check**: `curr[0] <= last[1]` is overlap (not `<`). Two intervals `[1,3]` and `[3,4]` overlap at point 3.
+2. **Forget to sort** — without sorting, adjacent pairs in input aren't necessarily adjacent in time.
+3. **Mutating input vs creating new array** — be explicit. Best to create new arrays to avoid surprises.
+
+## Practice problems
+
+1. **Easy:** LC 252 — Meeting Rooms
+2. **Easy:** LC 228 — Summary Ranges
+3. **Medium:** LC 56 — Merge Intervals
+4. **Medium:** LC 57 — Insert Interval
+5. **Medium:** LC 435 — Non-overlapping Intervals
+6. **Medium:** LC 986 — Interval List Intersections
+7. **Medium:** LC 253 — Meeting Rooms II

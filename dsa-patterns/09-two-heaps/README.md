@@ -1,29 +1,42 @@
-# Pattern 9: Two Heaps
+# 09. Two Heaps
 
 ## When to use
-- Median of a data stream
-- Sliding window median
-- Partition into two halves
-- Anything needing min/max from both ends
 
-## Template (TypeScript)
+Problems where you need to **maintain two halves** of a dataset: a smaller half and a larger half. The boundary element (median) is what's tracked.
+
+## When to recognize
+
+- "Median of a data stream"
+- "Sliding window median"
+- "IPO (capital deployment)"
+- "Find largest K elements while seeing stream"
+
+## How it works
+
+- **Max-heap** for the smaller half (top is the largest of small)
+- **Min-heap** for the larger half (top is the smallest of large)
+- Always keep sizes balanced: `maxHeap.size() >= minHeap.size()` and `maxHeap.size() <= minHeap.size() + 1`
+- Median = `maxHeap.top()` (odd count) or avg of both tops (even count)
+
+## Template
 
 ```ts
-import { MinHeap, MaxHeap } from "some-heap-lib";
+import { MinHeap, MaxHeap } from "heap-js";
 
 class MedianFinder {
-  private maxHeap = new MaxHeap(); // smaller half
-  private minHeap = new MinHeap(); // larger half
+  maxHeap = new MaxHeap();  // smaller half
+  minHeap = new MinHeap();  // larger half
 
   addNum(num: number): void {
     this.maxHeap.push(num);
+    // Rebalance: ensure every element in maxHeap <= every in minHeap
     if (this.maxHeap.size() > this.minHeap.size() + 1) {
       this.minHeap.push(this.maxHeap.pop());
     }
-    // Rebalance
     if (this.minHeap.size() && this.maxHeap.peek() > this.minHeap.peek()) {
-      this.minHeap.push(this.maxHeap.pop());
-      this.maxHeap.push(this.minHeap.pop());
+      const a = this.maxHeap.pop(), b = this.minHeap.pop();
+      this.maxHeap.push(b);
+      this.minHeap.push(a);
     }
   }
 
@@ -34,15 +47,23 @@ class MedianFinder {
 }
 ```
 
-## Problem list
+## Variations
 
-| # | Problem | LeetCode # | Difficulty | Status |
-|---|---|---|---|---|
-| 1 | Find Median from Data Stream | 295 | Hard | ☐ |
-| 2 | Sliding Window Median | 480 | Hard | ☐ |
-| 3 | IPO (capital deployment) | 502 | Hard | ☐ |
+| Variation | Description |
+|---|---|
+| **Median from stream** | Insert into max-heap, rebalance |
+| **Sliding window median** | Add right, remove left (lazy deletion) |
+| **IPO** | Two heaps for available/unavailable projects |
+| **Kth largest** | Top K — simpler, just min-heap of size K |
 
-## My key takeaways
-_Fill after solving_
+## Common pitfalls
 
-**Heaps in JS/TS:** No built-in. Use `mnemonist` or implement yourself with array + heapify.
+1. **Wrong heap choice**: Kth largest uses MIN-heap of size K (smallest of top-K at top).
+2. **JavaScript has no built-in heap** — use a library like `heap-js` or implement.
+3. **Lazy deletion in sliding window**: mark old elements as invalid; skip on pop.
+
+## Practice problems
+
+1. **Hard:** LC 295 — Find Median from Data Stream
+2. **Hard:** LC 480 — Sliding Window Median
+3. **Hard:** LC 502 — IPO

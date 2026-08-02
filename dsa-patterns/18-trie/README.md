@@ -1,12 +1,22 @@
-# Pattern 18: Trie (Prefix Tree)
+# 18. Trie (Prefix Tree)
 
 ## When to use
-- Prefix matching / autocomplete
-- Word search / dictionary
-- Count words with prefix
-- IP routing (longest prefix match)
 
-## Template (TypeScript)
+**Prefix-based** operations on a set of strings: insert, search, autocomplete, prefix matching. Each operation is O(L) where L = word length.
+
+## When to recognize
+
+- "Autocomplete"
+- "Word search in grid"
+- "Longest common prefix"
+- "Implement a dictionary"
+- "IP routing (longest prefix match)"
+
+## When NOT to use
+
+If you just need to store and look up words, use a **HashSet** — simpler. Trie wins when you need **prefix queries**.
+
+## Template
 
 ```ts
 class TrieNode {
@@ -46,15 +56,24 @@ class Trie {
 }
 ```
 
-## Problem list
+## Variations
 
-| # | Problem | LeetCode # | Difficulty | Status |
-|---|---|---|---|---|
-| 1 | Implement Trie | 208 | Medium | ☐ |
-| 2 | Word Search II | 212 | Hard | ☐ |
-| 3 | Design Add and Search Words | 211 | Medium | ☐ |
+| Variation | Description |
+|---|---|
+| **Standard trie** | Insert, search, startsWith |
+| **Word search II** | Multiple words in grid — build trie, DFS grid |
+| **Add and search word** | Words with `.` wildcard |
+| **Longest common prefix** | Walk trie, stop at branching |
+| **Replace words** | Find shortest prefix in dictionary |
 
-## My key takeaways
-_Fill after solving_
+## Common pitfalls
 
-**When NOT to use:** Just storing words → use Set. Trie wins when you need prefix queries.
+1. **No built-in trie in JS** — implement with class + Map.
+2. **Missing `isWord` flag** — every node is a prefix, only some are words.
+3. **Trie uses more memory than hash** — but supports prefix queries.
+
+## Practice problems
+
+1. **Medium:** LC 208 — Implement Trie
+2. **Medium:** LC 211 — Design Add and Search Words
+3. **Hard:** LC 212 — Word Search II
