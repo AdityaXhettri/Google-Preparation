@@ -40,6 +40,4 @@
 ## Resources
 - (Fill in: Alex Xu's books? educative.io? YouTube?)
 
-## Inspiration
-- Anshul Garg's repo has real project source code (Kafka, gRPC, Spring Boot) — study patterns, not solutions.
 
