@@ -54,9 +54,9 @@ export function StudyPage() {
   const progressPct = (readCount / NOTES.length) * 100;
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex bg-white dark:bg-zinc-950">
       {/* Sidebar */}
-      <aside className="w-80 shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-gradient-to-b from-white to-zinc-50 dark:from-zinc-900 dark:to-zinc-950 overflow-auto flex flex-col">
+      <aside className="w-80 shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 overflow-auto flex flex-col">
         <div className="p-5 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 bg-white/80 dark:bg-zinc-900/80 backdrop-blur z-10">
           <h2 className="font-bold text-lg flex items-center gap-2"><span>📚</span> Study</h2>
           <p className="text-xs text-zinc-500 mt-1">{readCount} of {NOTES.length} notes read · {progressPct.toFixed(0)}%</p>
@@ -158,11 +158,11 @@ function ReadMode({ selected, content, isRead, onMarkRead }: { selected: NoteRef
     );
   }
   return (
-    <article className="max-w-3xl mx-auto p-8 lg:p-12">
-      <div className="flex justify-between items-start mb-8 sticky top-0 bg-zinc-50/80 dark:bg-zinc-950/80 backdrop-blur py-3 -mt-3 z-10">
+    <article className="max-w-3xl mx-auto p-8 lg:p-12 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 min-h-screen">
+      <div className="flex justify-between items-start mb-8 sticky top-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur py-3 -mt-3 z-10">
         <div>
           <div className="text-xs text-zinc-500 uppercase tracking-wide">{selected.emoji} {selected.category}</div>
-          <h1 className="text-3xl font-bold mt-1">{selected.title}</h1>
+          <h1 className="text-3xl font-bold mt-1 text-zinc-900 dark:text-zinc-100">{selected.title}</h1>
         </div>
         <button
           onClick={onMarkRead}
@@ -174,7 +174,7 @@ function ReadMode({ selected, content, isRead, onMarkRead }: { selected: NoteRef
           {isRead ? "✓ Read" : "Mark read"}
         </button>
       </div>
-      <div className="prose dark:prose-invert max-w-none">
+      <div className="prose max-w-none text-zinc-900 dark:text-zinc-100">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
       </div>
     </article>
