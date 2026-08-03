@@ -1,8 +1,30 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
+
+// Manually load .env (handles BOM and Windows quirks)
+function loadEnv() {
+  const envPath = resolve(process.cwd(), ".env");
+  if (!existsSync(envPath)) return;
+  try {
+    let content = readFileSync(envPath, "utf-8");
+    // Strip UTF-8 BOM if present
+    if (content.charCodeAt(0) === 0xFEFF) content = content.slice(1);
+    for (const line of content.split(/\r?\n/)) {
+      const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/i);
+      if (!m) continue;
+      if (m[1].startsWith("#")) continue;
+      if (process.env[m[1]] === undefined) {
+        process.env[m[1]] = m[2];
+      }
+    }
+  } catch (e) {
+    console.error("Failed to load .env:", e);
+  }
+}
+loadEnv();
 
 const PORT = Number(process.env.PORT ?? 3001);
 const GEMINI_KEY = process.env.GEMINI_API_KEY;

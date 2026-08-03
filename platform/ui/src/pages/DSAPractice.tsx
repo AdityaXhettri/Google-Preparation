@@ -393,15 +393,57 @@ function HintChat({ problem, onClose }: { problem: Problem; onClose: () => void 
           history: msgs,
         }),
       });
-      const data = await res.json();
-      if (!res.ok || data.error) {
-        setError(data.error ?? `HTTP ${res.status}`);
+      const data = await res.json().catch(() => null) as { error?: string; hint?: string } | null;
+      if (!res.ok || !data || data.error) {
+        const errMsg = data?.error || `HTTP ${res.status}`;
+        const isApiKeyIssue = errMsg.includes("GEMINI_API_KEY");
+        if (isApiKeyIssue) {
+          // Fall back to offline hints (basic but always works)
+          const offlineHint = getOfflineHint(text, problem);
+          setMsgs((m) => [
+            ...m,
+            {
+              role: "assistant",
+              ts: Date.now(),
+              content:
+                "⚙️ **API key not set** — using offline hint mode (no API needed).\n\n" +
+                offlineHint +
+                "\n\n---\n\n💡 To enable the AI tutor: get a FREE key at https://aistudio.google.com/apikey, add it to `platform/api/.env` as `GEMINI_API_KEY=AIzaSy...`, and restart the API.",
+            },
+          ]);
+        } else {
+          // Other API error — also fall back to offline
+          const offlineHint = getOfflineHint(text, problem);
+          setMsgs((m) => [
+            ...m,
+            {
+              role: "assistant",
+              ts: Date.now(),
+              content:
+                "⚙️ **API error** — using offline hint mode.\n\n" +
+                offlineHint +
+                "\n\n---\n\n*API said: " + errMsg + "*",
+            },
+          ]);
+        }
         return;
       }
       setMsgs((m) => [...m, { role: "assistant", content: data.hint, ts: Date.now() }]);
       storage.bumpHint(problem.id);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Network error");
+      // Network error or API down — fall back to offline hint
+      const offlineHint = getOfflineHint(text, problem);
+      setMsgs((m) => [
+        ...m,
+        {
+          role: "assistant",
+          ts: Date.now(),
+          content:
+            "⚙️ **API not reachable** — using offline hint mode.\n\n" +
+            offlineHint +
+            "\n\n---\n\n💡 To enable the AI tutor: start the Bun API on port 3001 (`cd platform/api && bun run dev`) and add a Gemini key to `.env`.",
+        },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -446,4 +488,48 @@ function HintChat({ problem, onClose }: { problem: Problem; onClose: () => void 
       </div>
     </div>
   );
+}
+
+// ---- Offline hint generator (no API needed) ----
+function getOfflineHint(question: string, problem: { hints?: [string, string, string]; category: string }): string {
+  const q = question.toLowerCase();
+
+  // 1. If the problem has explicit hints, reveal progressively based on what user asked
+  if (problem.hints) {
+    if (q.includes("brute force") || q.includes("slow") || q.includes("optimi")) {
+      return `**Bigger hint (level 2/3):**\n\n${problem.hints[1]}`;
+    }
+    if (q.includes("data structure") || q.includes("what should i use") || q.includes("which")) {
+      return `**Bigger hint (level 2/3):**\n\n${problem.hints[1]}`;
+    }
+    // Default: subtle hint
+    return `**Subtle hint (level 1/3):**\n\n${problem.hints[0]}\n\n💡 Tip: try asking about "data structure" or "brute force" for the next level.`;
+  }
+
+  // 2. Pattern-based fallback hints
+  const pattern = problem.category;
+  if (pattern.includes("sliding")) {
+    return "**Hint:** Slide a window across the array. When the constraint breaks, shrink the left side. Don't re-add the whole window each time.";
+  }
+  if (pattern.includes("two-pointers")) {
+    return "**Hint:** For sorted arrays, walk from both ends. If sum too small → move left up. If too big → move right down.";
+  }
+  if (pattern.includes("merge-interval")) {
+    return "**Hint:** Sort by start time. Then sweep: if current.start ≤ last.end, overlap and merge; else push new interval.";
+  }
+  if (pattern.includes("binary-search")) {
+    return "**Hint:** Each step halves the search space. Check mid, then go left or right based on the comparison.";
+  }
+  if (pattern.includes("dynamic-program")) {
+    return "**Hint:** Identify the state (what changes between subproblems). Find the recurrence. Memoize or tabulate.";
+  }
+  if (pattern.includes("graph")) {
+    return "**Hint:** Build an adjacency list. Use BFS (for shortest path) or DFS (for any path / cycle detection).";
+  }
+  if (pattern.includes("trie")) {
+    return "**Hint:** Each node has up to 26 children (one per letter). Walk down the string, creating nodes as needed.";
+  }
+
+  // 3. Generic fallback
+  return "**Hint:** Try the brute force first (even O(n²) is a start), then think about what data structure would speed it up. Common tricks: hash map (O(1) lookup), two pointers (sorted array), sliding window (contiguous subarray).";
 }
