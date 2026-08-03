@@ -1,9 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { storage } from "../lib/storage";
+import { storage, get as storageGet } from "../lib/storage";
 import { getNote } from "../lib/notes";
 import { NOTES, MCQ_BANK, CHEAT_SHEETS, extractFlashcards, type Flashcard, type MCQ, type NoteRef } from "../lib/study";
+import { PATTERN_META } from "../lib/pattern-meta";
+import {
+  TIERS, RATE_LABELS, BOSSES, getBossForPattern,
+  ACHIEVEMENTS, DAILY_QUESTS, getDemonRank, getStreakLabel,
+  type Tier,
+} from "../lib/studyTheme";
 
 type Mode = "read" | "flashcards" | "quiz" | "cheatsheet";
 
@@ -218,7 +224,7 @@ function ReadMode({
 
 // ---- FLASHCARD MODE ----
 function FlashcardStatsSidebar() {
-  const stats = storage.get<Record<string, 0 | 1 | 2 | 3>>("flashcard_mastery", {});
+  const stats = storageGet<Record<string, 0 | 1 | 2 | 3>>("flashcard_mastery", {});
   const all = Object.values(stats);
   const mastered = all.filter((m) => m === 3).length;
   const learning = all.filter((m) => m === 1 || m === 2).length;
@@ -245,97 +251,496 @@ function FlashcardStatsSidebar() {
   );
 }
 
+// ============================================
+// DEMON SLAYER THEMED FLASHCARD MODE
+// ============================================
+
+function SakuraBackground() {
+  // 12 floating sakura petals
+  return (
+    <div className="ds-sakura-bg">
+      {Array.from({ length: 12 }).map((_, i) => {
+        const left = Math.random() * 100;
+        const delay = Math.random() * 15;
+        const duration = 15 + Math.random() * 15;
+        return (
+          <div
+            key={i}
+            className="ds-sakura"
+            style={{
+              left: `${left}%`,
+              animationDelay: `${delay}s`,
+              animationDuration: `${duration}s`,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 function FlashcardMode() {
-  // Build pool from all notes
-  const allCards: Flashcard[] = useMemo(() => {
-    const cards: Flashcard[] = [];
-    for (const note of NOTES) {
-      const md = getNote(note.path);
-      if (!md || md.startsWith("*")) continue;
-      const extracted = extractFlashcards(md, note.path, note.category);
-      cards.push(...extracted);
-    }
-    // Also seed from MCQ bank (treat as "what is the optimal approach for X" → answer from explanation)
-    return cards;
+  // Build pool from all notes (async fetch)
+  const [allCards, setAllCards] = useState<Flashcard[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const cards: Flashcard[] = [];
+      for (const note of NOTES) {
+        const md = await getNote(note.path);
+        if (cancelled) return;
+        if (!md || md.startsWith("*")) continue;
+        const extracted = extractFlashcards(md, note.path, note.category);
+        cards.push(...extracted);
+      }
+      if (!cancelled) setAllCards(cards);
+    })();
+    return () => { cancelled = true; };
   }, []);
 
+  const [mode, setMode] = useState<"review" | "boss">("review");
   const [idx, setIdx] = useState(0);
   const [revealed, setRevealed] = useState(false);
-  const [filter, setFilter] = useState<"all" | "due" | "new">("all");
+  const [filter, setFilter] = useState<"all" | "due">("all");
+  const [shaking, setShaking] = useState(false);
+  const [slash, setSlash] = useState(false);
+  const [burst, setBurst] = useState(false);
 
-  const mastery = storage.get<Record<string, 0 | 1 | 2 | 3>>("flashcard_mastery", {});
+  const mastery = storageGet<Record<string, 0 | 1 | 2 | 3>>("flashcard_mastery", {});
+  const [masteryState, setMasteryState] = useState(mastery);
+
+  // Stats for demon rank
+  const masteredCount = Object.values(masteryState).filter((m) => m === 3).length;
+  const rank = getDemonRank(masteredCount);
+  const streak = storage.getStreak();
+  const streakLabel = getStreakLabel(streak.current);
+
+  // Achievements
+  const stats = {
+    mastered: masteredCount,
+    total: allCards.length,
+    streakDays: streak.current,
+    hashiraPatterns: PATTERN_META?.length || 0, // placeholder
+  };
 
   const dueCards = useMemo(() => {
-    // "due" = low mastery or never seen
     return allCards.filter((c) => {
-      const m = mastery[c.id];
+      const m = masteryState[c.id];
       return m === undefined || m === 0 || m === 1;
     });
-  }, [allCards, mastery]);
+  }, [allCards, masteryState]);
 
   const pool = filter === "due" ? dueCards : allCards;
   const card = pool[idx % Math.max(pool.length, 1)];
 
   const rate = (m: 0 | 1 | 2 | 3) => {
     if (!card) return;
-    const next = { ...mastery, [card.id]: m };
+    const next = { ...masteryState, [card.id]: m };
     storage.set("flashcard_mastery", next);
+    setMasteryState(next);
     setRevealed(false);
     setIdx((i) => i + 1);
   };
 
+  // Visual effects on rate
+  const handleRate = (m: 0 | 1 | 2 | 3) => {
+    setSlash(true);
+    setTimeout(() => setSlash(false), 600);
+    if (m === 0) {
+      setShaking(true);
+      setTimeout(() => setShaking(false), 400);
+    } else if (m === 3) {
+      setBurst(true);
+      setTimeout(() => setBurst(false), 1200);
+    }
+    rate(m);
+  };
+
   if (allCards.length === 0) {
     return (
-      <div className="max-w-2xl mx-auto p-12 text-center">
+      <div className="max-w-2xl mx-auto p-12 text-center relative z-10">
         <div className="text-6xl mb-4">🎴</div>
         <h1 className="text-2xl font-bold mb-3">No flashcards yet</h1>
         <p className="text-zinc-500">Write content in your notes (H2 headings + paragraphs) — flashcards will be auto-generated.</p>
-        <p className="text-xs text-zinc-400 mt-2">Tip: Each H2 heading in a note becomes a flashcard front; the next paragraph becomes the back.</p>
+      </div>
+    );
+  }
+
+  const cardTier: Tier = card ? (masteryState[card.id] ?? 0) as Tier : 0;
+  const tierMeta = TIERS[cardTier];
+
+  return (
+    <div className="max-w-3xl mx-auto p-8 relative z-10">
+      <SakuraBackground />
+
+      {/* Header with rank + mode switcher */}
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">
+            🗡️ Hashira Training
+          </h1>
+          <div className="flex items-center gap-3 mt-1 text-sm">
+            <span className="ds-title-gradient">{rank.emoji} {rank.name}</span>
+            <span className="text-zinc-500">·</span>
+            <span className="ds-flame">{streakLabel.emoji}</span>
+            <span className="text-zinc-500 text-xs">{streakLabel.label}</span>
+          </div>
+        </div>
+        <div className="flex gap-1">
+          <button
+            onClick={() => setMode("review")}
+            className={`px-3 py-1.5 text-sm rounded ${mode === "review" ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900" : "border border-zinc-300 dark:border-zinc-700"}`}
+          >
+            🎴 Review
+          </button>
+          <button
+            onClick={() => setMode("boss")}
+            className={`px-3 py-1.5 text-sm rounded ${mode === "boss" ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900" : "border border-zinc-300 dark:border-zinc-700"}`}
+          >
+            👹 Boss Battle
+          </button>
+        </div>
+      </div>
+
+      {mode === "review" ? (
+        <ReviewMode
+          pool={pool}
+          allCards={allCards}
+          dueCards={dueCards}
+          filter={filter}
+          setFilter={(f) => { setFilter(f); setIdx(0); }}
+          card={card}
+          idx={idx}
+          revealed={revealed}
+          shaking={shaking}
+          slash={slash}
+          burst={burst}
+          cardTier={cardTier}
+          tierMeta={tierMeta}
+          onFlip={() => setRevealed((r) => !r)}
+          onRate={handleRate}
+          masteredCount={masteredCount}
+          achievements={ACHIEVEMENTS}
+          stats={stats}
+          rank={rank}
+        />
+      ) : (
+        <BossBattleMode
+          allCards={allCards}
+          masteryState={masteryState}
+          onMasteryUpdate={(id, m) => {
+            const next = { ...masteryState, [id]: m };
+            setMasteryState(next);
+            storage.set("flashcard_mastery", next);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---- Review Mode (Hashira Training) ----
+function ReviewMode({
+  pool, allCards, dueCards, filter, setFilter, card, idx, revealed,
+  shaking, slash, burst, cardTier, tierMeta, onFlip, onRate, masteredCount, achievements, stats, rank,
+}: any) {
+  return (
+    <>
+      <div className="flex gap-1 mb-4">
+        <FilterBtn active={filter === "all"} onClick={() => setFilter("all")} label={`🎴 All (${allCards.length})`} />
+        <FilterBtn active={filter === "due"} onClick={() => setFilter("due")} label={`🩸 Due (${dueCards.length})`} />
+        <div className="ml-auto flex items-center gap-2 text-xs">
+          <span className="text-zinc-500">Mastered:</span>
+          <span className="font-bold text-amber-500">{masteredCount}/{allCards.length}</span>
+        </div>
+      </div>
+
+      {!card ? (
+        <div className="p-8 border border-zinc-200 dark:border-zinc-800 rounded-xl text-center text-zinc-500 relative z-10">
+          No cards in this filter.
+        </div>
+      ) : (
+        <div className="relative z-10">
+          <div
+            onClick={onFlip}
+            className={`ds-card ${revealed ? "flipped" : ""} ${shaking ? "ds-shake" : ""} cursor-pointer`}
+            style={{ minHeight: "320px" }}
+          >
+            {/* Slash animation overlay */}
+            {slash && <div className="ds-slash" />}
+            {burst && <div className="ds-burst" />}
+
+            <div className="ds-card-inner relative w-full h-full" style={{ minHeight: "320px" }}>
+              {/* Front */}
+              <div
+                className={`ds-card-face rounded-2xl p-8 bg-zinc-900 dark:bg-zinc-950 flex flex-col justify-center items-center text-center ds-tier-${cardTier}`}
+                style={{ minHeight: "320px" }}
+              >
+                {cardTier === 3 && <span className="ds-hashira-badge absolute top-4 right-4">⚔️ HASHIRA</span>}
+                <div className="text-xs uppercase tracking-wider text-zinc-500 mb-3 flex items-center gap-2">
+                  {tierMeta.emoji} {tierMeta.name}
+                </div>
+                <div className="text-xl font-semibold leading-relaxed text-zinc-100">
+                  {card.front}
+                </div>
+                <div className="mt-4 text-xs text-zinc-600">
+                  ⚔️ Tap to reveal the technique
+                </div>
+              </div>
+
+              {/* Back */}
+              <div
+                className={`ds-card-back rounded-2xl p-8 bg-gradient-to-br from-amber-950 to-red-950 flex flex-col justify-center items-center text-center ds-tier-${cardTier}`}
+                style={{ minHeight: "320px" }}
+              >
+                {cardTier === 3 && <span className="ds-hashira-badge absolute top-4 right-4">⚔️ HASHIRA</span>}
+                <div className="text-xs uppercase tracking-wider text-amber-300 mb-3 flex items-center gap-2">
+                  🩸 Answer · {tierMeta.name}
+                </div>
+                <div className="text-base leading-relaxed text-zinc-100 whitespace-pre-wrap overflow-auto max-h-64">
+                  {card.back}
+                </div>
+                <div className="mt-4 text-xs text-amber-200/60">
+                  How cleanly did you strike?
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {revealed && (
+            <div className="mt-4 grid grid-cols-4 gap-2 relative z-10">
+              <ThemedRateBtn tier={0} onClick={() => onRate(0)} />
+              <ThemedRateBtn tier={1} onClick={() => onRate(1)} />
+              <ThemedRateBtn tier={2} onClick={() => onRate(2)} />
+              <ThemedRateBtn tier={3} onClick={() => onRate(3)} />
+            </div>
+          )}
+
+          <div className="mt-4 text-center text-xs text-zinc-500 relative z-10">
+            Card {(idx % Math.max(pool.length, 1)) + 1} of {pool.length}
+          </div>
+        </div>
+      )}
+
+      <AchievementsPanel stats={stats} achievements={achievements} rank={rank} />
+    </>
+  );
+}
+
+// ---- Themed rate button ----
+function ThemedRateBtn({ tier, onClick }: { tier: Tier; onClick: () => void }) {
+  const label = RATE_LABELS[tier];
+  const colorMap: Record<Tier, string> = {
+    0: "bg-red-900/50 hover:bg-red-900 text-red-200 border-red-700",
+    1: "bg-orange-900/50 hover:bg-orange-900 text-orange-200 border-orange-700",
+    2: "bg-amber-900/50 hover:bg-amber-900 text-amber-200 border-amber-700",
+    3: "bg-gradient-to-r from-amber-600 to-red-600 hover:from-amber-500 hover:to-red-500 text-white border-amber-400",
+  };
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3 py-3 rounded-lg text-xs font-medium border-2 ${colorMap[tier]} transition`}
+    >
+      <div className="text-lg mb-1">{label.emoji}</div>
+      <div className="font-bold">{label.name}</div>
+    </button>
+  );
+}
+
+// ---- Achievements Panel ----
+function AchievementsPanel({ stats, achievements, rank }: any) {
+  return (
+    <div className="mt-8 p-4 border border-zinc-800 bg-zinc-900/50 rounded-xl">
+      <div className="flex justify-between items-center mb-3">
+        <h3 className="font-semibold text-zinc-100 flex items-center gap-2">🏆 Achievements</h3>
+        <span className="text-sm">
+          <span className="ds-title-gradient">{rank.emoji} {rank.name}</span>
+        </span>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {achievements.map((a: any) => {
+          const unlocked = a.check(stats);
+          return (
+            <div
+              key={a.id}
+              className={`p-2 rounded-lg text-xs border ${
+                unlocked
+                  ? "border-amber-500 bg-amber-950/30 text-amber-100"
+                  : "border-zinc-800 bg-zinc-900/30 text-zinc-600"
+              }`}
+            >
+              <div className="text-lg mb-1">{a.emoji} {unlocked ? "" : "🔒"}</div>
+              <div className="font-bold">{a.name}</div>
+              <div className="text-[10px] opacity-70">{a.desc}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// BOSS BATTLE MODE
+// ============================================
+
+function BossBattleMode({ allCards, masteryState, onMasteryUpdate }: { allCards: Flashcard[]; masteryState: Record<string, Tier>; onMasteryUpdate: (id: string, m: Tier) => void }) {
+  // Pick a pattern: default first available
+  const [patternIdx, setPatternIdx] = useState(0);
+  const [cardIdx, setCardIdx] = useState(0);
+  const [revealed, setRevealed] = useState(false);
+  const [shaking, setShaking] = useState(false);
+  const [flashClass, setFlashClass] = useState<"ds-damage" | "ds-heal" | "">("");
+
+  // Cards for this pattern
+  const patternCards = useMemo(() => {
+    return allCards.filter((c) => c.sourcePath.includes(`/${["01-sliding-window","02-two-pointers","03-fast-slow-pointers","04-merge-intervals","05-cyclic-sort","06-linkedlist-reversal","07-tree-bfs","08-tree-dfs","09-two-heaps","10-subsets-backtracking","11-binary-search","12-top-k-elements","13-k-way-merge","14-dynamic-programming","15-greedy","16-graphs-topological-sort","17-union-find","18-trie"][patternIdx]}/`));
+  }, [allCards, patternIdx]);
+
+  const boss = BOSSES[patternIdx];
+  const card = patternCards[cardIdx % Math.max(patternCards.length, 1)];
+
+  // HP based on how many cards in pattern are still "low mastery"
+  const cardsInPattern = allCards.filter((c) =>
+    c.sourcePath.includes(`/${boss.pattern}/`)
+  );
+  const damagedCount = cardsInPattern.filter(
+    (c) => (masteryState[c.id] ?? 0) >= 2
+  ).length;
+  const hp = Math.max(0, cardsInPattern.length - damagedCount);
+  const maxHp = cardsInPattern.length;
+  const isDefeated = hp === 0 && cardsInPattern.length > 0;
+
+  // Hashira unlocks: when ALL cards in pattern are at level 3
+  const allMastered = cardsInPattern.length > 0 && cardsInPattern.every((c) => masteryState[c.id] === 3);
+  const justDefeated = isDefeated && !allMastered;
+
+  const rate = (m: Tier) => {
+    if (!card) return;
+    onMasteryUpdate(card.id, m);
+
+    if (m >= 2) {
+      // Demon takes damage
+      setFlashClass("ds-damage");
+      setTimeout(() => setFlashClass(""), 300);
+    } else {
+      // Demon attacks
+      setFlashClass("ds-heal");
+      setShaking(true);
+      setTimeout(() => {
+        setShaking(false);
+        setFlashClass("");
+      }, 400);
+    }
+
+    setRevealed(false);
+    setCardIdx((i) => i + 1);
+  };
+
+  if (allCards.length === 0) {
+    return (
+      <div className="p-12 text-center text-zinc-500">
+        No flashcards available. Write content in your notes.
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-8">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">🎴 Flashcards</h1>
-        <div className="flex gap-1">
-          <FilterBtn active={filter === "all"} onClick={() => { setFilter("all"); setIdx(0); }} label={`All (${allCards.length})`} />
-          <FilterBtn active={filter === "due"} onClick={() => { setFilter("due"); setIdx(0); }} label={`Due (${dueCards.length})`} />
-        </div>
+    <div>
+      {/* Pattern selector */}
+      <div className="mb-4 flex gap-1 overflow-x-auto pb-2">
+        {BOSSES.map((b, i) => {
+          const c = allCards.filter((card) => card.sourcePath.includes(`/${b.pattern}/`));
+          const mastered = c.filter((card) => masteryState[card.id] === 3).length;
+          const done = mastered > 0 && mastered === c.length;
+          return (
+            <button
+              key={b.pattern}
+              onClick={() => { setPatternIdx(i); setCardIdx(0); setRevealed(false); }}
+              className={`px-3 py-2 rounded text-xs whitespace-nowrap ${
+                i === patternIdx
+                  ? done
+                    ? "bg-gradient-to-r from-amber-500 to-red-500 text-white"
+                    : "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
+                  : done
+                  ? "bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-200"
+                  : "border border-zinc-300 dark:border-zinc-700"
+              }`}
+            >
+              {done ? "⚔️" : b.rank.includes("Upper") ? "👹" : "🩸"} {b.name}
+            </button>
+          );
+        })}
       </div>
 
-      {!card ? (
-        <div className="p-8 border border-zinc-200 dark:border-zinc-800 rounded-xl text-center text-zinc-500">
-          No cards in this filter.
+      {/* Boss HP bar */}
+      <div className={`mb-4 p-4 rounded-xl bg-zinc-900/80 border-2 border-red-900 ${flashClass}`}>
+        <div className="flex justify-between items-center mb-2">
+          <div>
+            <div className="text-xs text-zinc-500 uppercase">{boss.rank} {boss.pattern}</div>
+            <div className="text-lg font-bold text-red-300">👹 {boss.name}</div>
+          </div>
+          {isDefeated && (
+            <div className="ds-hashira-badge ds-trail">⚔️ DEFEATED</div>
+          )}
+        </div>
+        <div className="ds-hp-bar">
+          <div className="ds-hp-fill" style={{ width: `${(hp / maxHp) * 100}%` }} />
+          <div className="ds-hp-text">
+            {hp} / {maxHp} HP
+          </div>
+        </div>
+        {isDefeated && allMastered && (
+          <div className="mt-3 text-center text-amber-400 font-bold ds-trail">
+            👑 You have become a HASHIRA of {boss.name}!
+          </div>
+        )}
+      </div>
+
+      {/* Card */}
+      {patternCards.length === 0 ? (
+        <div className="p-8 border border-zinc-700 bg-zinc-900 rounded-xl text-center text-zinc-500">
+          No cards in this pattern yet. Write content in the pattern's README.
         </div>
       ) : (
-        <div
-          onClick={() => setRevealed((r) => !r)}
-          className="cursor-pointer min-h-[300px] p-8 border-2 border-zinc-200 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-900 flex flex-col justify-center text-center hover:border-zinc-400 transition"
-        >
-          <div className="text-xs text-zinc-500 uppercase tracking-wide mb-3">
-            {revealed ? "Answer" : "Question"} · {card.category}
+        <div className={`relative z-10 ${shaking ? "ds-shake" : ""}`}>
+          <div
+            onClick={() => setRevealed((r) => !r)}
+            className={`ds-card ${revealed ? "flipped" : ""} cursor-pointer`}
+            style={{ minHeight: "280px" }}
+          >
+            <div className="ds-card-inner relative w-full h-full" style={{ minHeight: "280px" }}>
+              <div className="ds-card-face rounded-2xl p-8 bg-zinc-900 dark:bg-zinc-950 flex flex-col justify-center items-center text-center border-2 border-red-900" style={{ minHeight: "280px" }}>
+                <div className="text-xs uppercase tracking-wider text-red-400 mb-3">⚔️ STRIKE THE DEMON</div>
+                <div className="text-lg font-semibold leading-relaxed text-zinc-100">
+                  {card.front}
+                </div>
+                <div className="mt-4 text-xs text-zinc-600">Tap to attack</div>
+              </div>
+              <div className="ds-card-back rounded-2xl p-8 bg-gradient-to-br from-red-950 to-amber-950 flex flex-col justify-center items-center text-center border-2 border-amber-600" style={{ minHeight: "280px" }}>
+                <div className="text-xs uppercase tracking-wider text-amber-300 mb-3">🩸 DEMON WOUNDED</div>
+                <div className="text-base leading-relaxed text-zinc-100 overflow-auto max-h-56">
+                  {card.back}
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="text-xl font-semibold leading-relaxed">
-            {revealed ? card.back : card.front}
+
+          {revealed && (
+            <div className="mt-4 grid grid-cols-2 gap-2 relative z-10">
+              <ThemedRateBtn tier={0} onClick={() => rate(0)} />
+              <ThemedRateBtn tier={1} onClick={() => rate(1)} />
+              <ThemedRateBtn tier={2} onClick={() => rate(2)} />
+              <ThemedRateBtn tier={3} onClick={() => rate(3)} />
+            </div>
+          )}
+
+          <div className="mt-4 text-center text-xs text-zinc-500 relative z-10">
+            Strike {(cardIdx % Math.max(patternCards.length, 1)) + 1} of {patternCards.length}
           </div>
-          <div className="mt-4 text-xs text-zinc-400">tap to {revealed ? "hide" : "reveal"}</div>
         </div>
       )}
-
-      {revealed && card && (
-        <div className="mt-4 grid grid-cols-4 gap-2">
-          <RateBtn label="Again" color="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200" onClick={() => rate(0)} />
-          <RateBtn label="Hard" color="bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-200" onClick={() => rate(1)} />
-          <RateBtn label="Good" color="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" onClick={() => rate(2)} />
-          <RateBtn label="Easy" color="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200" onClick={() => rate(3)} />
-        </div>
-      )}
-
-      <div className="mt-4 text-center text-xs text-zinc-500">
-        Card {(idx % Math.max(pool.length, 1)) + 1} of {pool.length}
-      </div>
     </div>
   );
 }

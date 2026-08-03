@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PATTERNS, randomProblem, getProblem, type Problem } from "../lib/problems";
 import { storage } from "../lib/storage";
+import { runCodeInWorker, type RunResult } from "../lib/codeRunner";
 
 const Editor = lazy(() => import("@monaco-editor/react").then((m) => ({ default: m.default })));
 
@@ -22,12 +23,15 @@ export function DSAPractice() {
   const [code, setCode] = useState("");
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [running, setRunning] = useState(false);
-  const [results, setResults] = useState<{ pass: boolean; got: unknown; want: unknown; input: unknown[] }[]>([]);
+  const [results, setResults] = useState<{ pass: boolean; got: unknown; want: unknown; input: unknown[]; error?: string; consoleOutput?: string[]; durationMs?: number }[]>([]);
   const [done, setDone] = useState(false);
   const [startedAt, setStartedAt] = useState(0);
   const [hintLevel, setHintLevel] = useState<0 | 1 | 2>(0);
   const [hintsUsed, setHintsUsed] = useState(0);
   const [chatOpen, setChatOpen] = useState(false);
+  const [showConsole, setShowConsole] = useState(false);
+  const [consoleLogs, setConsoleLogs] = useState<string[]>([]);
+  const [globalError, setGlobalError] = useState<string | null>(null);
 
   useEffect(() => {
     const patternParam = searchParams.get("pattern") ?? undefined;
@@ -78,34 +82,33 @@ export function DSAPractice() {
     setResults([]);
   };
 
-  const runTests = () => {
-    const out: typeof results = [];
-    try {
-      const fnName = problem.signature.match(/function (\w+)/)?.[1];
-      const userFn = new Function(`
-        ${code}
-        return { ${fnName ?? "fn"} };
-      `)();
+  const runTests = async () => {
+    if (running) return;
+    setRunning(true);
+    setResults([]);
+    setGlobalError(null);
+    setConsoleLogs([]);
 
-      for (const t of problem.tests) {
-        try {
-          let got: unknown;
-          if (fnName && userFn[fnName]) {
-            got = userFn[fnName](...t.input);
-          } else {
-            out.push({ pass: false, got: "no function found", want: t.output, input: t.input });
-            continue;
-          }
-          const pass = JSON.stringify(got) === JSON.stringify(t.output);
-          out.push({ pass, got, want: t.output, input: t.input });
-        } catch (err) {
-          out.push({ pass: false, got: String(err), want: t.output, input: t.input });
+    const fnName = problem.signature.match(/function (\w+)/)?.[1] ?? "fn";
+    const result: RunResult = await runCodeInWorker(code, fnName, problem.tests);
+
+    if (result.globalError) {
+      setGlobalError(result.globalError);
+      setConsoleLogs((result.results[0]?.consoleOutput as string[]) || []);
+    } else {
+      setResults(result.results);
+      // Collect console output from all tests
+      const allLogs: string[] = [];
+      for (const r of result.results) {
+        if (r.consoleOutput && r.consoleOutput.length > 0) {
+          allLogs.push(`--- Test input ${JSON.stringify(r.input)} ---`);
+          allLogs.push(...(r.consoleOutput as string[]));
         }
       }
-    } catch (err) {
-      out.push({ pass: false, got: `Compile error: ${String(err)}`, want: null, input: [] });
+      if (allLogs.length > 0) setShowConsole(true);
+      setConsoleLogs(allLogs);
     }
-    setResults(out);
+    setRunning(false);
   };
 
   const submit = (solved: boolean) => {
@@ -234,6 +237,18 @@ export function DSAPractice() {
           )}
 
           <h3 className="font-semibold mb-2 mt-6">Test Cases</h3>
+
+          {globalError && (
+            <div className="mb-3 p-3 rounded border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/50 text-sm">
+              <div className="font-semibold text-red-700 dark:text-red-300 mb-1">⚠️ {globalError}</div>
+              {globalError.includes("not found") && (
+                <div className="text-xs text-zinc-600 dark:text-zinc-400">
+                  Make sure your function name matches the signature: <code className="bg-zinc-200 dark:bg-zinc-800 px-1 rounded">{problem.signature}</code>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="space-y-2">
             {problem.tests.map((t, i) => {
               const r = results[i];
@@ -241,13 +256,47 @@ export function DSAPractice() {
                 <div key={i} className={`p-2 rounded text-xs font-mono ${
                   r ? (r.pass ? "bg-green-50 dark:bg-green-950" : "bg-red-50 dark:bg-red-950") : "bg-zinc-100 dark:bg-zinc-800"
                 }`}>
-                  <div>Input: {JSON.stringify(t.input)}</div>
-                  <div>Expected: {JSON.stringify(t.output)}</div>
-                  {r && <div>Got: {JSON.stringify(r.got)}</div>}
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div>Input: {JSON.stringify(t.input)}</div>
+                      <div>Expected: {JSON.stringify(t.output)}</div>
+                      {r && (
+                        <div>
+                          {r.error ? (
+                            <span className="text-red-600 dark:text-red-400">Error: {r.error}</span>
+                          ) : (
+                            <span>Got: {JSON.stringify(r.got)}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {r && (
+                      <div className="text-zinc-500 ml-2">
+                        {r.pass ? "✓" : "✗"} {r.durationMs?.toFixed(2)}ms
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}
           </div>
+
+          {/* Console output panel */}
+          {consoleLogs.length > 0 && (
+            <div className="mt-3">
+              <button
+                onClick={() => setShowConsole((v) => !v)}
+                className="text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+              >
+                {showConsole ? "▼" : "▶"} Console output ({consoleLogs.length} lines)
+              </button>
+              {showConsole && (
+                <pre className="mt-1 p-2 bg-zinc-900 dark:bg-black text-green-400 rounded text-xs font-mono overflow-x-auto max-h-40 overflow-y-auto">
+                  {consoleLogs.join("\n")}
+                </pre>
+              )}
+            </div>
+          )}
           {results.length > 0 && (
             <div className="mt-4 flex gap-2">
               {allPassed ? (
@@ -274,8 +323,14 @@ export function DSAPractice() {
                 />
               </Suspense>
               <div className="border-t border-zinc-200 dark:border-zinc-800 p-3 bg-white dark:bg-zinc-900 flex gap-2">
-                <button onClick={runTests} className="px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded font-medium">Run tests</button>
-                <button onClick={() => setCode(problem.starterCode)} className="px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded">Reset code</button>
+            <button
+              onClick={runTests}
+              disabled={running}
+              className="px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded font-medium disabled:opacity-50"
+            >
+              {running ? "Running..." : "Run tests"}
+            </button>
+            <button onClick={() => setCode(problem.starterCode)} className="px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded">Reset code</button>
                 <button
                   onClick={() => setChatOpen((v) => !v)}
                   className={`ml-auto px-3 py-2 rounded text-sm ${chatOpen ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200" : "border border-zinc-300 dark:border-zinc-700"}`}
