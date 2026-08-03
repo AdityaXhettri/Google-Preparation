@@ -11,7 +11,7 @@ export type NoteRef = {
 
 export const NOTES: NoteRef[] = [
   { path: "README.md", title: "Master Plan", category: "Other", emoji: "🗺️" },
-  { path: "dsa-patterns/README.md", title: "DSA Patterns Overview", category: "DSA", emoji: "🎯" },
+  { path: "dsa-patterns/README.md", title: "DSA Patterns Overview (50 patterns)", category: "DSA", emoji: "🎯" },
   { path: "dsa-patterns/01-sliding-window/README.md", title: "01. Sliding Window", category: "DSA", emoji: "🪟" },
   { path: "dsa-patterns/02-two-pointers/README.md", title: "02. Two Pointers", category: "DSA", emoji: "👉" },
   { path: "dsa-patterns/03-fast-slow-pointers/README.md", title: "03. Fast & Slow Pointers", category: "DSA", emoji: "🐢" },

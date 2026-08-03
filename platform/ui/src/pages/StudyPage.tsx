@@ -23,8 +23,17 @@ export function StudyPage() {
       setContent("");
       return;
     }
-    const text = getNote(selected.path);
-    setContent(text ?? `*Note not found: ${selected.path}*`);
+    setContent("*Loading...*");
+    getNote(selected.path).then((text) => {
+      if (text) {
+        setContent(text);
+      } else {
+        setContent(
+          `*Note not found: ${selected.path}.md*\n\n` +
+          `Make sure the file exists at \`platform/ui/public/notes/${selected.path}.md\`.`
+        );
+      }
+    });
   }, [selected]);
 
   const markRead = () => {
