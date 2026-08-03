@@ -381,73 +381,145 @@ function QuizSidebar() {
 }
 
 function QuizMode() {
-  const [pool, setPool] = useState<MCQ[]>(MCQ_BANK);
+  const QUIZ_SIZE = 17;
+  const [bank, setBank] = useState<MCQ[]>(MCQ_BANK);
+  const [session, setSession] = useState<MCQ[]>([]);
   const [idx, setIdx] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
-  const [stats, setStats] = useState<Record<string, { correct: number; total: number }>>({});
+  const [answers, setAnswers] = useState<{ qid: string; picked: number; correct: boolean }[]>([]);
+  const [done, setDone] = useState(false);
+  const [filter, setFilter] = useState<MCQ["category"] | "all">("all");
 
-  const q = pool[idx];
-
-  const choose = (i: number) => {
-    if (showResult) return;
-    setSelected(i);
-    setShowResult(true);
-    setStats((s) => {
-      const cur = s[q.category] ?? { correct: 0, total: 0 };
-      return {
-        ...s,
-        [q.category]: {
-          correct: cur.correct + (i === q.correctIndex ? 1 : 0),
-          total: cur.total + 1,
-        },
-      };
-    });
-  };
-
-  const next = () => {
-    setSelected(null);
-    setShowResult(false);
-    setIdx((i) => (i + 1) % pool.length);
-  };
-
-  const filterByCat = (cat: MCQ["category"] | "all") => {
-    setPool(cat === "all" ? MCQ_BANK : MCQ_BANK.filter((q) => q.category === cat));
+  // Build a shuffled session of QUIZ_SIZE questions
+  const startNew = (cat: MCQ["category"] | "all" = filter) => {
+    let pool = cat === "all" ? MCQ_BANK : MCQ_BANK.filter((q) => q.category === cat);
+    pool = pool.slice().sort(() => Math.random() - 0.5);
+    const drawn = pool.slice(0, Math.min(QUIZ_SIZE, pool.length));
+    setSession(drawn);
     setIdx(0);
     setSelected(null);
     setShowResult(false);
+    setAnswers([]);
+    setDone(false);
+    if (cat !== "all") setFilter(cat);
+  };
+
+  // Auto-start first session
+  useEffect(() => {
+    if (session.length === 0) startNew("all");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const q = session[idx];
+
+  const choose = (i: number) => {
+    if (showResult || !q) return;
+    const correct = i === q.correctIndex;
+    setSelected(i);
+    setShowResult(true);
+    setAnswers((a) => [...a, { qid: q.id, picked: i, correct }]);
+  };
+
+  const next = () => {
+    if (idx + 1 >= session.length) {
+      setDone(true);
+      return;
+    }
+    setSelected(null);
+    setShowResult(false);
+    setIdx((i) => i + 1);
   };
 
   if (MCQ_BANK.length === 0) {
     return <div className="p-12 text-center text-zinc-500">No quiz questions yet.</div>;
   }
 
-  return (
-    <div className="max-w-3xl mx-auto p-8">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">❓ Quiz</h1>
-        <select value="all" onChange={(e) => filterByCat(e.target.value as any)} className="px-3 py-1.5 text-sm border border-zinc-300 dark:border-zinc-700 rounded bg-white dark:bg-zinc-900">
-          <option value="all">All categories</option>
-          <option value="DSA">DSA only</option>
-          <option value="System Design">System Design</option>
-          <option value="Behavioral">Behavioral</option>
-        </select>
-      </div>
+  // ---- DONE SCREEN ----
+  if (done) {
+    const totalCorrect = answers.filter((a) => a.correct).length;
+    const totalAsked = answers.length;
+    const pct = totalAsked > 0 ? Math.round((totalCorrect / totalAsked) * 100) : 0;
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
-        {(Object.keys(stats) as Array<keyof typeof stats>).map((cat) => {
-          const s = stats[cat];
-          if (!s.total) return null;
-          const pct = Math.round((s.correct / s.total) * 100);
-          return (
-            <div key={cat} className="p-3 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900">
+    // Per-category breakdown
+    const byCat: Record<string, { correct: number; total: number }> = {};
+    for (const a of answers) {
+      const qx = session.find((s) => s.id === a.qid);
+      if (!qx) continue;
+      const cur = byCat[qx.category] ?? { correct: 0, total: 0 };
+      byCat[qx.category] = { correct: cur.correct + (a.correct ? 1 : 0), total: cur.total + 1 };
+    }
+
+    return (
+      <div className="max-w-3xl mx-auto p-8">
+        <h1 className="text-3xl font-bold mb-2">🎉 Quiz complete!</h1>
+        <p className="text-zinc-500 mb-6">You scored <strong className="text-zinc-900 dark:text-zinc-100">{totalCorrect}/{totalAsked}</strong> ({pct}%)</p>
+
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          {Object.entries(byCat).map(([cat, s]) => (
+            <div key={cat} className="p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900">
               <div className="text-xs text-zinc-500 uppercase">{cat}</div>
-              <div className="text-lg font-bold mt-1">{pct}%</div>
+              <div className="text-2xl font-bold mt-1">{Math.round((s.correct / s.total) * 100)}%</div>
               <div className="text-xs text-zinc-500">{s.correct}/{s.total} correct</div>
             </div>
-          );
-        })}
+          ))}
+        </div>
+
+        <div className="flex gap-2">
+          <button onClick={() => startNew("all")} className="flex-1 px-4 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-lg font-medium">
+            🔀 New random 17 questions
+          </button>
+          <button onClick={() => startNew("DSA")} className="px-4 py-3 border border-zinc-300 dark:border-zinc-700 rounded-lg font-medium">
+            DSA only
+          </button>
+          <button onClick={() => startNew("System Design")} className="px-4 py-3 border border-zinc-300 dark:border-zinc-700 rounded-lg font-medium">
+            SD only
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!q) return <div className="p-8 text-zinc-500">Loading question…</div>;
+
+  // ---- IN-PROGRESS ----
+  return (
+    <div className="max-w-3xl mx-auto p-8">
+      <div className="flex justify-between items-center mb-4 gap-2 flex-wrap">
+        <h1 className="text-2xl font-bold">❓ Quiz</h1>
+        <div className="flex items-center gap-2">
+          <select
+            value={filter}
+            onChange={(e) => startNew(e.target.value as any)}
+            className="px-3 py-1.5 text-sm border border-zinc-300 dark:border-zinc-700 rounded bg-white dark:bg-zinc-900"
+          >
+            <option value="all">All categories</option>
+            <option value="DSA">DSA only</option>
+            <option value="System Design">System Design</option>
+            <option value="Behavioral">Behavioral</option>
+          </select>
+          <button
+            onClick={() => startNew(filter)}
+            className="px-3 py-1.5 text-sm border border-zinc-300 dark:border-zinc-700 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            title="Draw a new random set"
+          >
+            🔀 Reshuffle
+          </button>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="mb-4">
+        <div className="flex justify-between items-center text-xs text-zinc-500 mb-1">
+          <span>Question {idx + 1} of {session.length}</span>
+          <span>{answers.filter((a) => a.correct).length} correct so far</span>
+        </div>
+        <div className="h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all"
+            style={{ width: `${((idx + (showResult ? 1 : 0)) / session.length) * 100}%` }}
+          />
+        </div>
       </div>
 
       <div className="p-6 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 mb-4">
@@ -492,15 +564,26 @@ function QuizMode() {
         )}
       </div>
 
-      {showResult && (
-        <button onClick={next} className="w-full px-4 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-lg font-medium">
-          Next question →
-        </button>
+      {showResult ? (
+        <div className="flex gap-2">
+          <button
+            onClick={next}
+            className="flex-1 px-4 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-lg font-medium"
+          >
+            {idx + 1 >= session.length ? "See results →" : "Next question →"}
+          </button>
+          <button
+            onClick={() => startNew(filter)}
+            className="px-4 py-3 border border-zinc-300 dark:border-zinc-700 rounded-lg font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          >
+            Restart
+          </button>
+        </div>
+      ) : (
+        <div className="text-center text-xs text-zinc-500">
+          Pick an answer to see if you're right
+        </div>
       )}
-
-      <div className="mt-4 text-center text-xs text-zinc-500">
-        Question {idx + 1} of {pool.length}
-      </div>
     </div>
   );
 }

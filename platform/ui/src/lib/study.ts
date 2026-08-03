@@ -93,30 +93,54 @@ export type MCQ = {
   explanation: string;
 };
 
-export const MCQ_BANK: MCQ[] = [
+// Raw question bank. The exported MCQ_BANK below SHUFFLES each question's
+// options at module load so the correct answer is in a random position
+// (A/B/C/D) — not always B. This prevents the "every answer is B" feeling.
+const MCQ_RAW: Omit<MCQ, "options" | "correctIndex"> & { correct: string }[] = [
   // DSA
-  { id: "mcq-1", category: "DSA", question: "Which pattern is best for 'find longest substring without repeating characters'?", options: ["Two Pointers", "Sliding Window", "Dynamic Programming", "Cyclic Sort"], correctIndex: 1, explanation: "Sliding Window with a Map tracking last-seen positions. Right pointer expands, left jumps past duplicates." },
-  { id: "mcq-2", category: "DSA", question: "Two Sum on a SORTED array — what's the optimal approach?", options: ["Hash map O(n)", "Binary search O(n log n)", "Two pointers O(n)", "Brute force O(n²)"], correctIndex: 2, explanation: "Sorted array + O(n) time → two pointers from both ends. Move pointer based on whether sum is too big or too small." },
-  { id: "mcq-3", category: "DSA", question: "Linked list cycle detection — what technique?", options: ["Hash set", "Two pointers (fast/slow)", "DFS", "Binary search"], correctIndex: 1, explanation: "Floyd's tortoise & hare. If they meet, there's a cycle. O(1) space." },
-  { id: "mcq-4", category: "DSA", question: "Merge overlapping intervals — first step?", options: ["Use a min-heap", "Sort by start time", "Use a stack", "Build a graph"], correctIndex: 1, explanation: "Sort by start. Then sweep: if current.start ≤ last.end, overlap and merge; else push new interval." },
-  { id: "mcq-5", category: "DSA", question: "Missing number in [0, n] — best technique?", options: ["Hash set", "Cyclic sort", "Sum formula (n*(n+1)/2)", "Both cyclic sort AND sum work"], correctIndex: 3, explanation: "Cyclic sort is O(n) time O(1) space. Sum formula is also O(n) O(1). Both work — interviewer accepts either." },
-  { id: "mcq-6", category: "DSA", question: "Validate BST — what's the bug in 'check parent > left and parent < right'?", options: ["It works fine", "Doesn't catch ancestor constraints", "Wrong time complexity", "Not a bug, just slow"], correctIndex: 1, explanation: "Each node must be within (min, max) range inherited from ALL ancestors. A node deep in tree might violate a higher ancestor's constraint." },
-  { id: "mcq-7", category: "DSA", question: "Kth largest in unsorted array — best structure?", options: ["Min-heap of size K", "Max-heap", "Sorted array", "Hash map"], correctIndex: 0, explanation: "Min-heap of size K keeps the K largest. Top is the smallest of those K. New bigger element evicts. O(n log k)." },
-  { id: "mcq-8", category: "DSA", question: "Longest Increasing Subsequence — what's the O(n log n) trick?", options: ["Binary search", "Patience sorting (tail array)", "Hash map", "DP only"], correctIndex: 1, explanation: "Maintain sorted 'tails' array. For each num, binary search position to replace. Length of tails = LIS length." },
-  { id: "mcq-9", category: "DSA", question: "Course schedule (prerequisites) — algorithm?", options: ["DFS", "Topological sort (Kahn's)", "Dijkstra", "Union find"], correctIndex: 1, explanation: "Build in-degree. Process in-degree-0 nodes. If you can't process all, there's a cycle. O(V+E)." },
-  { id: "mcq-10", category: "DSA", question: "Trie is best for…", options: ["Sorting numbers", "Prefix matching / autocomplete", "Finding shortest path", "Cycle detection"], correctIndex: 1, explanation: "Trie gives O(L) lookup for words, perfect for autocomplete, IP routing, word search in a grid." },
+  { id: "mcq-1", category: "DSA", question: "Which pattern is best for 'find longest substring without repeating characters'?", correct: "Sliding Window", wrong: ["Two Pointers", "Dynamic Programming", "Cyclic Sort"], explanation: "Sliding Window with a Map tracking last-seen positions. Right pointer expands, left jumps past duplicates." },
+  { id: "mcq-2", category: "DSA", question: "Two Sum on a SORTED array — what's the optimal approach?", correct: "Two pointers O(n)", wrong: ["Hash map O(n)", "Binary search O(n log n)", "Brute force O(n²)"], explanation: "Sorted array + O(n) time → two pointers from both ends. Move pointer based on whether sum is too big or too small." },
+  { id: "mcq-3", category: "DSA", question: "Linked list cycle detection — what technique?", correct: "Two pointers (fast/slow)", wrong: ["Hash set", "DFS", "Binary search"], explanation: "Floyd's tortoise & hare. If they meet, there's a cycle. O(1) space." },
+  { id: "mcq-4", category: "DSA", question: "Merge overlapping intervals — first step?", correct: "Sort by start time", wrong: ["Use a min-heap", "Use a stack", "Build a graph"], explanation: "Sort by start. Then sweep: if current.start ≤ last.end, overlap and merge; else push new interval." },
+  { id: "mcq-5", category: "DSA", question: "Missing number in [0, n] — best technique?", correct: "Both cyclic sort AND sum formula work", wrong: ["Hash set", "Cyclic sort", "Sum formula (n*(n+1)/2)"], explanation: "Cyclic sort is O(n) time O(1) space. Sum formula is also O(n) O(1). Both work — interviewer accepts either." },
+  { id: "mcq-6", category: "DSA", question: "Validate BST — what's the bug in 'check parent > left and parent < right'?", correct: "Doesn't catch ancestor constraints", wrong: ["It works fine", "Wrong time complexity", "Not a bug, just slow"], explanation: "Each node must be within (min, max) range inherited from ALL ancestors. A node deep in tree might violate a higher ancestor's constraint." },
+  { id: "mcq-7", category: "DSA", question: "Kth largest in unsorted array — best structure?", correct: "Min-heap of size K", wrong: ["Max-heap", "Sorted array", "Hash map"], explanation: "Min-heap of size K keeps the K largest. Top is the smallest of those K. New bigger element evicts. O(n log k)." },
+  { id: "mcq-8", category: "DSA", question: "Longest Increasing Subsequence — what's the O(n log n) trick?", correct: "Patience sorting (tail array)", wrong: ["Binary search", "Hash map", "DP only"], explanation: "Maintain sorted 'tails' array. For each num, binary search position to replace. Length of tails = LIS length." },
+  { id: "mcq-9", category: "DSA", question: "Course schedule (prerequisites) — algorithm?", correct: "Topological sort (Kahn's)", wrong: ["DFS", "Dijkstra", "Union find"], explanation: "Build in-degree. Process in-degree-0 nodes. If you can't process all, there's a cycle. O(V+E)." },
+  { id: "mcq-10", category: "DSA", question: "Trie is best for…", correct: "Prefix matching / autocomplete", wrong: ["Sorting numbers", "Finding shortest path", "Cycle detection"], explanation: "Trie gives O(L) lookup for words, perfect for autocomplete, IP routing, word search in a grid." },
 
   // System Design
-  { id: "mcq-sd-1", category: "System Design", question: "In a system design interview, what's the FIRST 5 minutes for?", options: ["Drawing boxes", "Estimating scale (QPS, storage)", "Clarifying requirements", "Choosing the database"], correctIndex: 2, explanation: "Always clarify scope FIRST. 'Twitter for who? How many users? What features?' This prevents solving the wrong problem." },
-  { id: "mcq-sd-2", category: "System Design", question: "What's fan-out on write vs read?", options: ["Database choice", "How to compute timelines (push vs pull)", "CDN vs origin", "Sync vs async"], correctIndex: 1, explanation: "Push (fan-out on write): timeline pre-computed into followers' feeds. Pull (fan-out on read): fetched when user opens. Hybrid for celebrity problem." },
-  { id: "mcq-sd-3", category: "System Design", question: "When do you need a message queue?", options: ["Always", "When producer and consumer rates differ, or to buffer spikes", "Only for events", "Never, use DB"], correctIndex: 1, explanation: "Queue decouples producer from consumer. Handles burst traffic. Kafka/RabbitMQ between services." },
-  { id: "mcq-sd-4", category: "System Design", question: "CDN is best for…", options: ["Database queries", "Static + cacheable content, edge delivery", "Internal RPC", "Search"], correctIndex: 1, explanation: "CDN caches at edge globally. Reduces latency for static assets, videos, etc. Internal traffic doesn't need CDN." },
+  { id: "mcq-sd-1", category: "System Design", question: "In a system design interview, what's the FIRST 5 minutes for?", correct: "Clarifying requirements", wrong: ["Drawing boxes", "Estimating scale (QPS, storage)", "Choosing the database"], explanation: "Always clarify scope FIRST. 'Twitter for who? How many users? What features?' This prevents solving the wrong problem." },
+  { id: "mcq-sd-2", category: "System Design", question: "What's fan-out on write vs read?", correct: "How to compute timelines (push vs pull)", wrong: ["Database choice", "CDN vs origin", "Sync vs async"], explanation: "Push (fan-out on write): timeline pre-computed into followers' feeds. Pull (fan-out on read): fetched when user opens. Hybrid for celebrity problem." },
+  { id: "mcq-sd-3", category: "System Design", question: "When do you need a message queue?", correct: "When producer and consumer rates differ, or to buffer spikes", wrong: ["Always", "Only for events", "Never, use DB"], explanation: "Queue decouples producer from consumer. Handles burst traffic. Kafka/RabbitMQ between services." },
+  { id: "mcq-sd-4", category: "System Design", question: "CDN is best for…", correct: "Static + cacheable content, edge delivery", wrong: ["Database queries", "Internal RPC", "Search"], explanation: "CDN caches at edge globally. Reduces latency for static assets, videos, etc. Internal traffic doesn't need CDN." },
 
   // Behavioral
-  { id: "mcq-bh-1", category: "Behavioral", question: "What's STAR?", options: ["Start, Try, Ask, Rest", "Situation, Task, Action, Result", "Story, Truth, Analysis, Reaction", "Subject, Theme, Arc, Resolution"], correctIndex: 1, explanation: "STAR = Situation (context) + Task (your responsibility) + Action (what YOU did, 3-5 bullets) + Result (metrics + learning)." },
-  { id: "mcq-bh-2", category: "Behavioral", question: "When asked about a failure, you should…", options: ["Blame external factors", "Take ownership + show what you learned", "Deflect to a success", "Say it wasn't your fault"], correctIndex: 1, explanation: "Ownership + growth. Google values 'Doing the Right Thing' and learning from mistakes. Blaming others is a red flag." },
-  { id: "mcq-bh-3", category: "Behavioral", question: "How many stories should you have ready for L4?", options: ["1-2", "5-8 covering 6 Googleyness attributes", "20+", "Just one good one"], correctIndex: 1, explanation: "Have 5-8 strong stories mapped to the 6 Googleyness attributes. Each story can answer multiple questions when reframed." },
+  { id: "mcq-bh-1", category: "Behavioral", question: "What's STAR?", correct: "Situation, Task, Action, Result", wrong: ["Start, Try, Ask, Rest", "Story, Truth, Analysis, Reaction", "Subject, Theme, Arc, Resolution"], explanation: "STAR = Situation (context) + Task (your responsibility) + Action (what YOU did, 3-5 bullets) + Result (metrics + learning)." },
+  { id: "mcq-bh-2", category: "Behavioral", question: "When asked about a failure, you should…", correct: "Take ownership + show what you learned", wrong: ["Blame external factors", "Deflect to a success", "Say it wasn't your fault"], explanation: "Ownership + growth. Google values 'Doing the Right Thing' and learning from mistakes. Blaming others is a red flag." },
+  { id: "mcq-bh-3", category: "Behavioral", question: "How many stories should you have ready for L4?", correct: "5-8 covering 6 Googleyness attributes", wrong: ["1-2", "20+", "Just one good one"], explanation: "Have 5-8 strong stories mapped to the 6 Googleyness attributes. Each story can answer multiple questions when reframed." },
 ];
+
+/**
+ * Build the final MCQ_BANK by shuffling each question's options
+ * (including the correct one) so the answer position is random per question.
+ */
+export const MCQ_BANK: MCQ[] = MCQ_RAW.map((q) => {
+  const all = [q.correct, ...q.wrong];
+  // Shuffle (Fisher-Yates)
+  for (let i = all.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [all[i], all[j]] = [all[j], all[i]];
+  }
+  return {
+    id: q.id,
+    category: q.category,
+    question: q.question,
+    explanation: q.explanation,
+    options: all,
+    correctIndex: all.indexOf(q.correct),
+  };
+});
 
 /** Cheat sheet content per pattern — quick reference. */
 export const CHEAT_SHEETS: Array<{ pattern: string; emoji: string; title: string; when: string; template: string; pitfalls: string[] }> = [
