@@ -42,6 +42,14 @@ export function StudyPage() {
     setReadPaths(new Set([...readPaths, selected.path]));
   };
 
+  const markUnread = () => {
+    if (!selected) return;
+    storage.markUnread(selected.path);
+    const next = new Set(readPaths);
+    next.delete(selected.path);
+    setReadPaths(next);
+  };
+
   const categories: NoteRef["category"][] = ["DSA", "System Design", "Behavioral", "Other"];
   const byCategory = categories.map((c) => ({
     category: c,
@@ -122,6 +130,7 @@ export function StudyPage() {
             content={content}
             isRead={selected ? readPaths.has(selected.path) : false}
             onMarkRead={markRead}
+            onMarkUnread={markUnread}
           />
         )}
         {mode === "flashcards" && <FlashcardMode />}
@@ -147,7 +156,19 @@ function ModeTab({ active, onClick, icon, label }: { active: boolean; onClick: (
 }
 
 // ---- READ MODE ----
-function ReadMode({ selected, content, isRead, onMarkRead }: { selected: NoteRef | null; content: string; isRead: boolean; onMarkRead: () => void }) {
+function ReadMode({
+  selected,
+  content,
+  isRead,
+  onMarkRead,
+  onMarkUnread,
+}: {
+  selected: NoteRef | null;
+  content: string;
+  isRead: boolean;
+  onMarkRead: () => void;
+  onMarkUnread: () => void;
+}) {
   if (!selected) {
     return (
       <div className="max-w-3xl mx-auto p-12 text-center">
@@ -159,20 +180,34 @@ function ReadMode({ selected, content, isRead, onMarkRead }: { selected: NoteRef
   }
   return (
     <article className="max-w-3xl mx-auto p-8 lg:p-12 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 min-h-screen">
-      <div className="flex justify-between items-start mb-8 sticky top-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur py-3 -mt-3 z-10">
+      <div className="flex justify-between items-start mb-8 sticky top-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur py-3 -mt-3 z-10 gap-3">
         <div>
           <div className="text-xs text-zinc-500 uppercase tracking-wide">{selected.emoji} {selected.category}</div>
           <h1 className="text-3xl font-bold mt-1 text-zinc-900 dark:text-zinc-100">{selected.title}</h1>
         </div>
-        <button
-          onClick={onMarkRead}
-          disabled={isRead}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-            isRead ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200" : "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:opacity-90"
-          }`}
-        >
-          {isRead ? "✓ Read" : "Mark read"}
-        </button>
+        <div className="flex gap-2">
+          {isRead ? (
+            <>
+              <span className="px-3 py-2 rounded-lg text-sm font-medium bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 inline-flex items-center gap-1">
+                ✓ Read
+              </span>
+              <button
+                onClick={onMarkUnread}
+                className="px-3 py-2 rounded-lg text-sm font-medium border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+                title="Mark as unread"
+              >
+                ↺ Unread
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={onMarkRead}
+              className="px-4 py-2 rounded-lg text-sm font-medium transition bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:opacity-90"
+            >
+              Mark read
+            </button>
+          )}
+        </div>
       </div>
       <div className="prose max-w-none text-zinc-900 dark:text-zinc-100">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>

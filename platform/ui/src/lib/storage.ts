@@ -79,6 +79,10 @@ export const storage = {
       set("readNotes", [...all, { path, readAt: Date.now() }]);
     }
   },
+  markUnread: (path: string) => {
+    const all = storage.getReadNotes().filter((r) => r.path !== path);
+    set("readNotes", all);
+  },
   isRead: (path: string): boolean =>
     storage.getReadNotes().some((r) => r.path === path),
 
