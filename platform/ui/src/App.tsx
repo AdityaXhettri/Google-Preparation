@@ -9,6 +9,7 @@ import { BehavioralPractice } from "./pages/BehavioralPractice";
 import { StudyPage } from "./pages/StudyPage";
 import { ChatPage } from "./pages/ChatPage";
 import { MockInterview } from "./pages/MockInterview";
+import { Settings } from "./pages/Settings";
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/practice/system-design" element={<SystemDesignPractice />} />
           <Route path="/practice/behavioral" element={<BehavioralPractice />} />
           <Route path="/mock" element={<MockInterview />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="/study" element={<StudyPage />} />
           <Route path="/chat" element={<ChatPage />} />
         </Routes>

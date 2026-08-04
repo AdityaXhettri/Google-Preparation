@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { PATTERNS, randomProblem, getProblem, type Problem } from "../lib/problems";
 import { storage } from "../lib/storage";
 import { runCodeInWorker, type RunResult } from "../lib/codeRunner";
+import { getBestAnswer } from "../lib/hintBank";
 
 const Editor = lazy(() => import("@monaco-editor/react").then((m) => ({ default: m.default })));
 
@@ -29,6 +30,35 @@ export function DSAPractice() {
   const [hintLevel, setHintLevel] = useState<0 | 1 | 2>(0);
   const [hintsUsed, setHintsUsed] = useState(0);
   const [chatOpen, setChatOpen] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  const [tokensToday, setTokensToday] = useState(() => {
+    if (typeof window === "undefined") return 0;
+    const stored = localStorage.getItem("tokens_today");
+    if (!stored) return 0;
+    const { date, count } = JSON.parse(stored);
+    if (date !== new Date().toDateString()) return 0;
+    return count;
+  });
+
+  // Cooldown timer
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
+  // Keyboard shortcut: Ctrl+H or "/" to toggle chat
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Ctrl+H or Cmd+H toggles chat
+      if ((e.ctrlKey || e.metaKey) && e.key === "h") {
+        e.preventDefault();
+        setChatOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
   const [showConsole, setShowConsole] = useState(false);
   const [consoleLogs, setConsoleLogs] = useState<string[]>([]);
   const [globalError, setGlobalError] = useState<string | null>(null);
@@ -190,6 +220,23 @@ export function DSAPractice() {
             </div>
           )}
 
+          {/* Floating Chat Button — always visible regardless of scroll */}
+          <button
+            onClick={() => {
+              console.log("[chat] toggle clicked, was:", chatOpen);
+              setChatOpen((v) => !v);
+            }}
+            style={{ position: "fixed", bottom: 24, left: 24, zIndex: 9999 }}
+            className={`px-5 py-4 rounded-full shadow-2xl font-bold text-base transition-all hover:scale-110 active:scale-95 ${
+              chatOpen
+                ? "bg-red-500 text-white hover:bg-red-600 ring-4 ring-red-300"
+                : "bg-blue-600 text-white hover:bg-blue-700 ring-4 ring-blue-300 animate-pulse"
+            }`}
+            title="Toggle hint tutor (Ctrl+H)"
+          >
+            {chatOpen ? "✕ CLOSE" : "💬 HINT TUTOR"}
+          </button>
+
           {/* Progressive Hints */}
           {problem.hints && (
             <div className="mb-4 p-4 border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
@@ -309,37 +356,44 @@ export function DSAPractice() {
         </div>
 
         {/* Right: Editor + optional chat panel */}
-        <div className="flex flex-col overflow-hidden">
-          <div className="flex-1 grid grid-cols-1" style={{ gridTemplateColumns: chatOpen ? "1fr 320px" : "1fr" }}>
-            <div className="flex flex-col overflow-hidden">
-              <Suspense fallback={<div className="h-full flex items-center justify-center text-zinc-500">Loading editor…</div>}>
-                <Editor
-                  height="100%"
-                  defaultLanguage="typescript"
-                  value={code}
-                  onChange={(v) => setCode(v ?? "")}
-                  theme="vs-dark"
-                  options={{ fontSize: 14, minimap: { enabled: false }, scrollBeyondLastLine: false }}
-                />
-              </Suspense>
-              <div className="border-t border-zinc-200 dark:border-zinc-800 p-3 bg-white dark:bg-zinc-900 flex gap-2">
+        <div className="flex flex-col h-full">
+          <div className="flex-1 grid min-h-0" style={{ gridTemplateColumns: chatOpen ? "1fr 320px" : "1fr" }}>
+            <div className="flex flex-col min-h-0 min-w-0 h-full">
+              <div className="flex-1 min-h-0">
+                <Suspense fallback={<div className="h-full flex items-center justify-center text-zinc-500">Loading editor…</div>}>
+                  <Editor
+                    height="100%"
+                    defaultLanguage="typescript"
+                    value={code}
+                    onChange={(v) => setCode(v ?? "")}
+                    theme="vs-dark"
+                    options={{ fontSize: 14, minimap: { enabled: false }, scrollBeyondLastLine: false }}
+                  />
+                </Suspense>
+              </div>
+              <div className="shrink-0 border-t border-zinc-200 dark:border-zinc-800 p-3 bg-white dark:bg-zinc-900 flex gap-2 flex-wrap">
             <button
               onClick={runTests}
               disabled={running}
               className="px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded font-medium disabled:opacity-50"
             >
-              {running ? "Running..." : "Run tests"}
+              {running ? "Running..." : "▶ Run tests"}
             </button>
-            <button onClick={() => setCode(problem.starterCode)} className="px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded">Reset code</button>
+            <button onClick={() => setCode(problem.starterCode)} className="px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded">↺ Reset code</button>
                 <button
                   onClick={() => setChatOpen((v) => !v)}
-                  className={`ml-auto px-3 py-2 rounded text-sm ${chatOpen ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200" : "border border-zinc-300 dark:border-zinc-700"}`}
+                  className={`ml-auto px-3 py-2 rounded text-sm font-medium ${chatOpen ? "bg-blue-600 text-white" : "bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200"}`}
+                  title="Toggle hint tutor"
                 >
-                  {chatOpen ? "✕ Close chat" : "💬 Chat"}
+                  {chatOpen ? "✕ Close" : "💬 Chat"}
                 </button>
               </div>
             </div>
-            {chatOpen && <HintChat problem={problem} onClose={() => setChatOpen(false)} />}
+            {chatOpen && (
+              <div className="h-full min-h-0 overflow-hidden">
+                <HintChat problem={problem} onClose={() => setChatOpen(false)} cooldown={cooldown} setCooldown={setCooldown} tokensToday={tokensToday} setTokensToday={setTokensToday} />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -348,7 +402,7 @@ export function DSAPractice() {
 }
 
 // ---- Hint chat panel (Socratic tutor via /api/hint) ----
-function HintChat({ problem, onClose }: { problem: Problem; onClose: () => void }) {
+function HintChat({ problem, onClose, cooldown, setCooldown, tokensToday, setTokensToday }: { problem: Problem; onClose: () => void; cooldown: number; setCooldown: (n: number | ((c: number) => number)) => void; tokensToday: number; setTokensToday: (n: number | ((c: number) => number)) => void }) {
   const [msgs, setMsgs] = useState<{ role: "user" | "assistant"; content: string; ts: number }[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -371,26 +425,56 @@ function HintChat({ problem, onClose }: { problem: Problem; onClose: () => void 
     storage.saveHints(problem.id, msgs);
   }, [msgs, problem.id]);
 
+  // Google search helpers
+  const openGoogle = (query: string) => {
+    const url = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+  const searchGoogle = () => {
+    const text = input.trim();
+    if (!text) return;
+    // Search across trusted DSA sources
+    openGoogle(`${text} (site:leetcode.com OR site:geeksforgeeks.org OR site:stackoverflow.com)`);
+  };
+  const searchProblem = () => {
+    openGoogle(`${problem.title} ${problem.difficulty ?? ""} leetcode solution (site:leetcode.com OR site:geeksforgeeks.org)`);
+  };
+  const searchPattern = () => {
+    openGoogle(`${problem.pattern ?? "algorithm"} pattern explained (site:geeksforgeeks.org OR site:leetcode.com)`);
+  };
+  const searchLeetCode = () => {
+    openGoogle(`${problem.title} site:leetcode.com/discuss`);
+  };
+
   const send = async () => {
     const text = input.trim();
     if (!text || loading) return;
+    if (cooldown > 0) return; // prevent spam
     const userMsg = { role: "user" as const, content: text, ts: Date.now() };
     setMsgs((m) => [...m, userMsg]);
     setInput("");
     setLoading(true);
     setError(null);
+    setCooldown(3); // 3s cooldown to avoid quota issues
 
     try {
+      // Get saved API key from localStorage (set in Settings page)
+      const savedKey = (typeof window !== "undefined" ? localStorage.getItem("ai_api_key_v2") : null) || "";
+      const savedProvider = (typeof window !== "undefined" ? localStorage.getItem("ai_provider_v2") : null) || "groq";
+      // Cap history to last 3 exchanges (saves tokens)
+      const recentMsgs = msgs.slice(-6);
       const res = await fetch("/api/hint", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           problemTitle: problem.title,
-          problemDescription: problem.description,
+          problemDescription: (problem.description ?? "").slice(0, 600),
           pattern: problem.pattern,
           difficulty: problem.difficulty,
           userQuestion: text,
-          history: msgs,
+          history: recentMsgs,
+          apiKey: savedKey,
+          provider: savedProvider,
         }),
       });
       const data = await res.json().catch(() => null) as { error?: string; hint?: string } | null;
@@ -426,10 +510,17 @@ function HintChat({ problem, onClose }: { problem: Problem; onClose: () => void 
             },
           ]);
         }
+        setCooldown(0); // reset cooldown on error so user can retry
         return;
       }
       setMsgs((m) => [...m, { role: "assistant", content: data.hint, ts: Date.now() }]);
       storage.bumpHint(problem.id);
+      // Track daily token usage
+      if (data.tokensUsed) {
+        const newCount = tokensToday + data.tokensUsed;
+        setTokensToday(newCount);
+        localStorage.setItem("tokens_today", JSON.stringify({ date: new Date().toDateString(), count: newCount }));
+      }
     } catch (e) {
       // Network error or API down — fall back to offline hint
       const offlineHint = getOfflineHint(text, problem);
@@ -446,21 +537,22 @@ function HintChat({ problem, onClose }: { problem: Problem; onClose: () => void 
       ]);
     } finally {
       setLoading(false);
+      // Don't keep cooldown ticking if request errored
     }
   };
 
   return (
-    <div className="border-l border-zinc-200 dark:border-zinc-800 flex flex-col bg-zinc-50 dark:bg-zinc-900">
-      <div className="p-3 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
+    <div className="w-80 border-l border-zinc-200 dark:border-zinc-800 flex flex-col bg-zinc-50 dark:bg-zinc-900 h-full">
+      <div className="p-3 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center shrink-0">
         <div>
           <div className="font-semibold text-sm">💬 Hint Tutor</div>
-          <div className="text-xs text-zinc-500">Socratic, no spoilers</div>
+          <div className="text-xs text-zinc-500">Socratic, no spoilers · {tokensToday > 0 && <span className="text-amber-600 dark:text-amber-400">~{tokensToday} tokens today</span>}</div>
         </div>
         <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700 text-sm">✕</button>
       </div>
-      <div className="flex-1 overflow-auto p-3 space-y-2">
+      <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
         {msgs.map((m, i) => (
-          <div key={i} className={`text-sm p-2 rounded whitespace-pre-wrap ${
+          <div key={i} className={`text-sm p-2 rounded whitespace-pre-wrap break-words ${
             m.role === "user" ? "bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100 ml-6" : "bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 mr-6"
           }`}>
             {m.content}
@@ -469,7 +561,7 @@ function HintChat({ problem, onClose }: { problem: Problem; onClose: () => void 
         {loading && <div className="text-xs text-zinc-500 italic">tutor is thinking…</div>}
         {error && <div className="text-xs text-red-600">Error: {error}. Make sure Bun API is running on port 3001 with GEMINI_API_KEY set.</div>}
       </div>
-      <div className="p-2 border-t border-zinc-200 dark:border-zinc-800">
+      <div className="p-2 border-t border-zinc-200 dark:border-zinc-800 shrink-0">
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -478,58 +570,101 @@ function HintChat({ problem, onClose }: { problem: Problem; onClose: () => void 
           rows={2}
           className="w-full text-sm p-2 border border-zinc-300 dark:border-zinc-700 rounded bg-white dark:bg-zinc-900 resize-none"
         />
-        <button
-          onClick={send}
-          disabled={!input.trim() || loading}
-          className="mt-1 w-full px-3 py-1.5 bg-blue-600 text-white rounded text-sm font-medium disabled:opacity-50"
-        >
-          {loading ? "..." : "Send"}
-        </button>
+        <div className="flex gap-1 mt-1">
+          <button
+            onClick={send}
+            disabled={loading || !input.trim() || cooldown > 0}
+            className="flex-1 px-3 py-1.5 bg-blue-600 text-white rounded text-sm font-medium disabled:opacity-50"
+          >
+            {loading ? "..." : cooldown > 0 ? `Wait ${cooldown}s` : "Send"}
+          </button>
+          <button
+            onClick={searchGoogle}
+            disabled={!input.trim()}
+            title="Search Google (LeetCode, GFG, Stack Overflow)"
+            className="px-3 py-1.5 border border-zinc-300 dark:border-zinc-700 rounded text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50"
+          >
+            🔍
+          </button>
+        </div>
+        <div className="flex gap-1 mt-1 flex-wrap">
+          <button
+            onClick={searchProblem}
+            className="px-2 py-1 text-xs border border-zinc-300 dark:border-zinc-700 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            title="Google this problem"
+          >
+            🔎 {problem.title} solutions
+          </button>
+          <button
+            onClick={searchPattern}
+            className="px-2 py-1 text-xs border border-zinc-300 dark:border-zinc-700 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            title="Google this pattern"
+          >
+            📚 {problem.pattern} pattern
+          </button>
+          <button
+            onClick={searchLeetCode}
+            className="px-2 py-1 text-xs border border-zinc-300 dark:border-zinc-700 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            title="LeetCode discussion"
+          >
+            💬 LeetCode discuss
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
 // ---- Offline hint generator (no API needed) ----
-function getOfflineHint(question: string, problem: { hints?: [string, string, string]; category: string }): string {
+function getOfflineHint(question: string, problem: { hints?: [string, string, string]; category: string; pattern?: string }): string {
   const q = question.toLowerCase();
+  const category = (problem.pattern ?? problem.category ?? "").toLowerCase();
 
-  // 1. If the problem has explicit hints, reveal progressively based on what user asked
+  // 1. Try the rich Q&A bank first (Socratic, real answers)
+  const bankAnswer = getBestAnswer(question, category);
+  if (bankAnswer && bankAnswer.length > 50 && !bankAnswer.startsWith("**Hint:")) {
+    // Got a real answer from the bank
+    return `**Socratic hint (offline mode — no API needed):**\n\n${bankAnswer}\n\n---\n💡 *This is from the built-in Q&A bank. For real AI responses, configure a Gemini API key in ⚙️ Settings.*`;
+  }
+
+  // 2. If the problem has explicit hints, reveal progressively
   if (problem.hints) {
-    if (q.includes("brute force") || q.includes("slow") || q.includes("optimi")) {
+    if (q.includes("brute force") || q.includes("slow") || q.includes("optimi") || q.includes("how to optimize")) {
       return `**Bigger hint (level 2/3):**\n\n${problem.hints[1]}`;
     }
     if (q.includes("data structure") || q.includes("what should i use") || q.includes("which")) {
       return `**Bigger hint (level 2/3):**\n\n${problem.hints[1]}`;
     }
+    if (q.includes("complexity") || q.includes("time") || q.includes("o(n")) {
+      return `**Bigger hint (level 2/3):**\n\n${problem.hints[1]}`;
+    }
     // Default: subtle hint
-    return `**Subtle hint (level 1/3):**\n\n${problem.hints[0]}\n\n💡 Tip: try asking about "data structure" or "brute force" for the next level.`;
+    return `**Subtle hint (level 1/3):**\n\n${problem.hints[0]}\n\n💡 Try asking about "data structure", "brute force", or "complexity" for deeper hints.`;
   }
 
-  // 2. Pattern-based fallback hints
-  const pattern = problem.category;
-  if (pattern.includes("sliding")) {
-    return "**Hint:** Slide a window across the array. When the constraint breaks, shrink the left side. Don't re-add the whole window each time.";
+  // 3. Fallback: pattern-specific hints
+  if (category.includes("sliding")) {
+    return "**Hint:** Slide a window across the array. When the constraint breaks, shrink the left side. Don't re-add the whole window each time.\n\nWant a real AI tutor? See ⚙️ Settings.";
   }
-  if (pattern.includes("two-pointers")) {
+  if (category.includes("two-pointers")) {
     return "**Hint:** For sorted arrays, walk from both ends. If sum too small → move left up. If too big → move right down.";
   }
-  if (pattern.includes("merge-interval")) {
+  if (category.includes("merge-interval")) {
     return "**Hint:** Sort by start time. Then sweep: if current.start ≤ last.end, overlap and merge; else push new interval.";
   }
-  if (pattern.includes("binary-search")) {
+  if (category.includes("binary-search")) {
     return "**Hint:** Each step halves the search space. Check mid, then go left or right based on the comparison.";
   }
-  if (pattern.includes("dynamic-program")) {
+  if (category.includes("dynamic-program")) {
     return "**Hint:** Identify the state (what changes between subproblems). Find the recurrence. Memoize or tabulate.";
   }
-  if (pattern.includes("graph")) {
+  if (category.includes("graph")) {
     return "**Hint:** Build an adjacency list. Use BFS (for shortest path) or DFS (for any path / cycle detection).";
   }
-  if (pattern.includes("trie")) {
+  if (category.includes("trie")) {
     return "**Hint:** Each node has up to 26 children (one per letter). Walk down the string, creating nodes as needed.";
   }
 
-  // 3. Generic fallback
+  // 4. Generic fallback
   return "**Hint:** Try the brute force first (even O(n²) is a start), then think about what data structure would speed it up. Common tricks: hash map (O(1) lookup), two pointers (sorted array), sliding window (contiguous subarray).";
 }
