@@ -32,7 +32,7 @@ const GEMINI_KEY = process.env.GEMINI_API_KEY;
 // ---- Gemini setup ----
 const genAI = GEMINI_KEY ? new GoogleGenerativeAI(GEMINI_KEY) : null;
 const chatModel = genAI?.getGenerativeModel({
-  model: "gemini-1.5-flash",
+  model: "gemini-2.0-flash",
   systemInstruction:
     "You are a helpful assistant for Google L4 interview preparation. " +
     "Answer concisely (under 200 words). Use code snippets when relevant.",
@@ -112,7 +112,7 @@ RULES (CRITICAL):
       ? `Conversation so far:\n${historyText}\n\nStudent: ${body.userQuestion}`
       : `Student: ${body.userQuestion}`;
 
-    const result = await genAI.getGenerativeModel({ model: "gemini-1.5-flash", systemInstruction: sysPrompt })
+    const result = await genAI.getGenerativeModel({ model: "gemini-2.0-flash", systemInstruction: sysPrompt })
       .generateContent(userMsg);
 
     return c.json({ hint: result.response.text() });
