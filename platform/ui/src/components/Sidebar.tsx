@@ -17,7 +17,6 @@ export function Sidebar() {
     <aside className="w-56 shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col h-screen sticky top-0">
       <div className="p-5 border-b border-zinc-200 dark:border-zinc-800">
         <div className="text-lg font-bold tracking-tight">L4 Prep</div>
-        <div className="text-xs text-zinc-500 mt-0.5">Local-only · Vite + Bun</div>
       </div>
       <nav className="flex-1 p-2 space-y-0.5">
         {NAV.map((item) => (
