@@ -216,28 +216,129 @@ For non-technical users, just **double-click** these files:
 
 ### Manual Start (For Developers)
 
-**Start the Frontend:**
+If you prefer typing commands (or the one-click buttons don't work for some reason), follow these step-by-step instructions.
+
+#### Prerequisites (Install First)
+
+| Tool | Download Link | Why you need it |
+|---|---|---|
+| **Node.js 18+** | https://nodejs.org/ | Runs the frontend |
+| **Bun** (optional) | https://bun.sh/ | Runs the backend (for AI features) |
+| **Git** (optional) | https://git-scm.com/ | To clone or version-control the project |
+
+After installing Node.js, **close and reopen** your terminal so it picks up the new commands.
+
+---
+
+#### Option A — Frontend Only (Simplest, no AI tutor)
+
+This is enough to use 95% of the app — DSA practice, quizzes, study notes, mock interview, system design, behavioral — all work without the backend.
+
+**Step 1: Open the project folder**
+- Open File Explorer
+- Navigate to: `Google-Preparation\platform\ui`
+- Click the address bar, type `cmd`, press Enter
+- A terminal opens in the right folder
+
+**Step 2: Install dependencies (only first time)**
 ```bash
-cd platform/ui
 npm install
+```
+- This takes 1-3 minutes the first time
+- Downloads ~200MB of packages
+- You only need to do this once
+
+**Step 3: Start the frontend**
+```bash
 npm run dev
 ```
-Opens at http://localhost:5173
+- Wait until you see: `Local: http://localhost:5173/`
+- Browser opens automatically (or open manually)
 
-**Start the Backend (Optional, for AI features):**
+**To stop:** Press `Ctrl + C` in the terminal
+
+---
+
+#### Option B — Frontend + Backend (Full AI Features)
+
+For real AI tutor responses (Groq or Gemini), run both servers.
+
+**Step 1: Start the backend first**
+
+Open a terminal:
+- File Explorer → `Google-Preparation\platform\api`
+- Address bar → type `cmd` → Enter
+
+Run:
 ```bash
-cd platform/api
 bun install
 bun run dev
 ```
-Runs at http://localhost:3001
+- You should see: `API listening on http://localhost:3001`
+- Backend is now running — **leave this window open**
 
-### AI Setup (Optional)
-1. Go to **https://console.groq.com/** (recommended, free 14,400 req/day)
+**Step 2: Start the frontend in a separate terminal**
+
+Open **another** terminal:
+- File Explorer → `Google-Preparation\platform\ui`
+- Address bar → type `cmd` → Enter
+
+Run:
+```bash
+npm install   (only first time)
+npm run dev
+```
+- You should see: `Local: http://localhost:5173/`
+- Browser opens
+
+**To stop both:** Press `Ctrl + C` in each terminal
+
+---
+
+#### Option C — One Terminal, Two Servers (Advanced)
+
+If you want both servers in the same terminal:
+
+```bash
+cd platform/api && bun install && bun run dev
+```
+In another terminal:
+```bash
+cd platform/ui && npm install && npm run dev
+```
+
+Or use a tool like `concurrently` to run both with one command:
+```bash
+npm install -g concurrently
+concurrently "cd platform/api && bun run dev" "cd platform/ui && npm run dev"
+```
+
+---
+
+#### What you should see in your browser
+
+Open **http://localhost:5173** and you should see:
+- A sidebar on the left with "L4 Prep" title
+- Menu items: Dashboard, DSA Patterns, Practice DSA, Study Notes, System Design, Behavioral, Mock Interview, Settings, Chat
+- Click "Practice DSA" → pick a problem → code in the editor → "▶▶ RUN TESTS & SUBMIT"
+
+If you see a **blank page** or an **error**:
+- Make sure the frontend terminal says "ready in ___ ms"
+- Check for red text in the terminal — that's an error message
+- Try refreshing the browser (Ctrl+R or F5)
+
+---
+
+### AI Setup (Optional — for real AI tutor)
+
+1. Go to **https://console.groq.com/** (recommended — free 14,400 req/day)
    -OR- **https://aistudio.google.com/apikey** (Gemini)
-2. Create an API key
-3. In the app, open **Settings** (⚙️)
-4. Paste the key and click **Test**
+2. Create an API key (copy it)
+3. In the app, open **Settings** (⚙️) from the sidebar
+4. Choose your provider (Groq or Gemini)
+5. Paste your key and click **🧪 Test key**
+6. If you see ✅, click **💾 Save**
+7. Now go to any DSA problem → open chat → type your question → real AI responses!
 
 ---
 
@@ -279,6 +380,7 @@ Runs at http://localhost:3001
 
 ---
 
+
 ## Security Notes
 
 - **No server-side database** — All user data lives in the browser
@@ -295,7 +397,7 @@ Personal project. Built for learning.
 
 ---
 
-**Author:** [Your Name]
+**Author:** [Aditya Chettri]
 **Purpose:** Google L4 Interview Preparation
 **Built with:** Vite + React + Bun + Hono
 **Impact:** Free, private, offline-capable interview prep for the next generation of engineers
