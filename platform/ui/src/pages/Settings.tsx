@@ -58,6 +58,40 @@ export function Settings() {
     setMessage("Cleared. The hint bot will use offline mode.");
   };
 
+  const checkUsage = async () => {
+    if (!key.trim() || provider !== "groq") {
+      setStatus("error");
+      setMessage("Save a Groq key first to check usage.");
+      return;
+    }
+    setStatus("testing");
+    setMessage("Checking Groq usage...");
+    try {
+      const res = await fetch("/api/groq-usage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: key.trim() }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setStatus("ok");
+        setMessage(
+          `📊 Groq usage:\n` +
+          `• Requests remaining: ${data.remainingRequests} / ${data.limitRequests}\n` +
+          `• Tokens remaining (this minute): ${data.remainingTokens} / ${data.limitTokens}\n` +
+          `• Requests reset: ${data.resetRequests}\n` +
+          `• Tokens reset: ${data.resetTokens}`
+        );
+      } else {
+        setStatus("error");
+        setMessage(`❌ ${data.error}`);
+      }
+    } catch (e) {
+      setStatus("error");
+      setMessage(`❌ ${e instanceof Error ? e.message : "unknown"}`);
+    }
+  };
+
   return (
     <div className="min-h-screen p-8 max-w-2xl mx-auto">
       <div className="mb-6">
@@ -153,11 +187,20 @@ export function Settings() {
           >
             🗑 Clear
           </button>
+          {provider === "groq" && (
+            <button
+              onClick={checkUsage}
+              className="px-4 py-2 border border-blue-300 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded font-medium"
+              title="Check your Groq usage limits"
+            >
+              📊 Check usage
+            </button>
+          )}
         </div>
 
         {message && (
           <div
-            className={`p-3 rounded text-sm ${
+            className={`p-3 rounded text-sm whitespace-pre-line ${
               status === "ok"
                 ? "bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300"
                 : status === "error"

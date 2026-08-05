@@ -24,8 +24,13 @@ export function PatternDetailPage() {
 
   useEffect(() => {
     if (!meta) return;
-    const text = getNote(`dsa-patterns/${slug}/README.md`);
-    setContent(text ?? `*No README found for ${slug}.*\n\nExpected at: Google-Preparation/dsa-patterns/${slug}/README.md`);
+    let cancelled = false;
+    setContent("*Loading...*");
+    getNote(`dsa-patterns/${slug}/README.md`).then((text) => {
+      if (cancelled) return;
+      setContent(text ?? `*No README found for ${slug}.*\n\nExpected at: Google-Preparation/dsa-patterns/${slug}/README.md`);
+    });
+    return () => { cancelled = true; };
   }, [slug, meta]);
 
   if (!meta) {

@@ -123,6 +123,48 @@ app.post("/api/test-groq", async (c) => {
   }
 });
 
+// ---- /api/groq-usage ----
+// Get current usage stats for a Groq API key
+app.post("/api/groq-usage", async (c) => {
+  try {
+    const body = await c.req.json().catch(() => null) as { apiKey?: string } | null;
+    const key = (body?.apiKey || "").trim();
+    if (!key) return c.json({ ok: false, error: "No API key provided" }, 400);
+
+    // Try to get usage from Groq's response headers (they include x-ratelimit-* headers)
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "llama-3.1-8b-instant",
+        messages: [{ role: "user", content: "ok" }],
+        max_tokens: 1,
+      }),
+    });
+
+    if (!res.ok) {
+      return c.json({ ok: false, error: `HTTP ${res.status}` }, res.status as 400);
+    }
+
+    // Groq returns rate limit info in headers
+    const headers = Object.fromEntries(res.headers.entries());
+    return c.json({
+      ok: true,
+      remainingRequests: headers["x-ratelimit-remaining-requests"] || "?",
+      remainingTokens: headers["x-ratelimit-remaining-tokens"] || "?",
+      limitRequests: headers["x-ratelimit-limit-requests"] || "?",
+      limitTokens: headers["x-ratelimit-limit-tokens"] || "?",
+      resetRequests: headers["x-ratelimit-reset-requests"] || "?",
+      resetTokens: headers["x-ratelimit-reset-tokens"] || "?",
+    });
+  } catch (e) {
+    return c.json({ ok: false, error: e instanceof Error ? e.message : "failed" }, 500);
+  }
+});
+
 // ---- /api/chat ----
 app.post("/api/chat", async (c) => {
   try {

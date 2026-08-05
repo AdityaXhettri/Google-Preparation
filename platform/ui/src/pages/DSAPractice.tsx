@@ -55,10 +55,15 @@ export function DSAPractice() {
         e.preventDefault();
         setChatOpen((v) => !v);
       }
+      // Ctrl+Enter or Cmd+Enter runs tests
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        e.preventDefault();
+        if (!running) runTests();
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [running]);
   const [showConsole, setShowConsole] = useState(false);
   const [consoleLogs, setConsoleLogs] = useState<string[]>([]);
   const [globalError, setGlobalError] = useState<string | null>(null);
@@ -220,22 +225,7 @@ export function DSAPractice() {
             </div>
           )}
 
-          {/* Floating Chat Button — always visible regardless of scroll */}
-          <button
-            onClick={() => {
-              console.log("[chat] toggle clicked, was:", chatOpen);
-              setChatOpen((v) => !v);
-            }}
-            style={{ position: "fixed", bottom: 24, left: 24, zIndex: 9999 }}
-            className={`px-5 py-4 rounded-full shadow-2xl font-bold text-base transition-all hover:scale-110 active:scale-95 ${
-              chatOpen
-                ? "bg-red-500 text-white hover:bg-red-600 ring-4 ring-red-300"
-                : "bg-blue-600 text-white hover:bg-blue-700 ring-4 ring-blue-300 animate-pulse"
-            }`}
-            title="Toggle hint tutor (Ctrl+H)"
-          >
-            {chatOpen ? "✕ CLOSE" : "💬 HINT TUTOR"}
-          </button>
+          {/* Floating Chat Button removed — use Ctrl+H or in-editor button */}
 
           {/* Progressive Hints */}
           {problem.hints && (
@@ -375,11 +365,11 @@ export function DSAPractice() {
             <button
               onClick={runTests}
               disabled={running}
-              className="px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded font-medium disabled:opacity-50"
+              className="px-5 py-3 bg-green-600 text-white rounded-lg font-bold text-sm hover:bg-green-700 disabled:opacity-50 shadow-md"
             >
-              {running ? "Running..." : "▶ Run tests"}
+              {running ? "⏳ Running..." : "▶▶ RUN TESTS & SUBMIT"}
             </button>
-            <button onClick={() => setCode(problem.starterCode)} className="px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded">↺ Reset code</button>
+            <button onClick={() => setCode(problem.starterCode)} className="px-4 py-3 border border-zinc-300 dark:border-zinc-700 rounded-lg font-medium text-sm">↺ Reset</button>
                 <button
                   onClick={() => setChatOpen((v) => !v)}
                   className={`ml-auto px-3 py-2 rounded text-sm font-medium ${chatOpen ? "bg-blue-600 text-white" : "bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200"}`}
