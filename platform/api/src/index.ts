@@ -168,32 +168,75 @@ app.post("/api/groq-usage", async (c) => {
 // ---- /api/chat ----
 app.post("/api/chat", async (c) => {
   try {
-    const body = await c.req.json().catch(() => null) as { question?: string; apiKey?: string } | null;
+    const body = await c.req.json().catch(() => null) as { question?: string; apiKey?: string; provider?: string } | null;
     const question = body?.question?.trim();
     const requestKey = body?.apiKey?.trim();
+    const requestProvider = body?.provider;
     const activeKey = requestKey || GEMINI_KEY;
     if (!activeKey) {
-      return c.json({ error: "No API key. Set GEMINI_API_KEY in .env or paste it in Settings." }, 500);
+      return c.json({ error: "No API key. Add one in Settings (⚙️)." }, 500);
     }
     if (!question) return c.json({ error: "question required" }, 400);
     if (question.length > 1000) return c.json({ error: "question too long" }, 400);
 
-    const activeGenAI = new GoogleGenerativeAI(activeKey);
-    const models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"];
-    let lastError = null;
-    for (const modelName of models) {
-      try {
-        const result = await activeGenAI.getGenerativeModel({ model: modelName, systemInstruction: "You are a helpful assistant for Google L4 interview preparation. Answer concisely (under 200 words). Use code snippets when relevant." })
-          .generateContent(question);
-        return c.json({ answer: result.response.text(), model: modelName });
-      } catch (e) {
-        lastError = e;
-        const errMsg = e instanceof Error ? e.message : "";
-        if (errMsg.includes("429") || errMsg.includes("quota")) break;
-        continue;
+    // Try Groq first if it's a Groq key or explicitly requested
+    if (activeKey.startsWith("gsk_") || requestProvider === "groq") {
+      const groqModels = ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "mixtral-8x7b-32768"];
+      for (const modelName of groqModels) {
+        try {
+          const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${activeKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: modelName,
+              messages: [
+                { role: "system", content: "You are a helpful assistant for Google L4 interview preparation. Answer concisely (under 200 words). Use code snippets when relevant." },
+                { role: "user", content: question },
+              ],
+              max_tokens: 500,
+              temperature: 0.7,
+            }),
+          });
+          if (!res.ok) {
+            const errText = await res.text();
+            if (errText.includes("429") || errText.includes("rate")) continue;
+            continue;
+          }
+          const data = await res.json();
+          const text = data.choices?.[0]?.message?.content?.trim() || "";
+          if (text) {
+            return c.json({ answer: text, model: modelName, provider: "groq" });
+          }
+        } catch (e) {
+          // try next model
+        }
       }
     }
-    throw lastError || new Error("All models failed");
+
+    // Fall back to Gemini
+    if (activeKey.startsWith("AIza")) {
+      const activeGenAI = new GoogleGenerativeAI(activeKey);
+      const models = ["gemini-1.5-flash-8b", "gemini-1.5-flash", "gemini-2.0-flash"];
+      let lastError = null;
+      for (const modelName of models) {
+        try {
+          const result = await activeGenAI.getGenerativeModel({ model: modelName, systemInstruction: "You are a helpful assistant for Google L4 interview preparation. Answer concisely (under 200 words). Use code snippets when relevant." })
+            .generateContent(question);
+          return c.json({ answer: result.response.text(), model: modelName, provider: "gemini" });
+        } catch (e) {
+          lastError = e;
+          const errMsg = e instanceof Error ? e.message : "";
+          if (errMsg.includes("429") || errMsg.includes("quota")) break;
+          continue;
+        }
+      }
+      throw lastError || new Error("All models failed");
+    }
+
+    throw new Error("No valid API key. Use a Groq key (gsk_...) or Gemini key (AIza...).");
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : "chat failed" }, 500);
   }

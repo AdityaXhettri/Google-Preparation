@@ -154,22 +154,147 @@ export function Dashboard() {
       </section>
 
       <section className="mb-8">
-        <h2 className="text-lg font-semibold mb-3">Recent Activity</h2>
-        {stats.attempts.length === 0 && stats.behavioralCount === 0 && stats.sdCount === 0 ? (
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold">📜 History</h2>
+          <button
+            onClick={() => {
+              if (confirm("Clear all history? This cannot be undone.")) {
+                localStorage.removeItem("gprep:attempts");
+                localStorage.removeItem("gprep:behavioral");
+                localStorage.removeItem("gprep:systemDesign");
+                localStorage.removeItem("gprep:readNotes");
+                localStorage.removeItem("gprep:hints_" + "*");
+                location.reload();
+              }
+            }}
+            className="text-xs text-red-600 dark:text-red-400 hover:underline"
+          >
+            Clear history
+          </button>
+        </div>
+        {stats.attempts.length === 0 && stats.behavioralCount === 0 && stats.sdCount === 0 && stats.readCount === 0 ? (
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-8 text-center text-zinc-500">
-            No activity yet. Start with a quick action above ↑
+            No history yet. Solve a problem or read a note to start tracking ↑
           </div>
         ) : (
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg divide-y divide-zinc-200 dark:divide-zinc-800">
-            {stats.attempts.slice(-5).reverse().map((a) => (
-              <div key={a.id} className="p-3 text-sm flex justify-between">
-                <span>{a.solved ? "✅" : "❌"} {a.pattern} ({a.difficulty})</span>
-                <span className="text-zinc-500">{new Date(a.startedAt).toLocaleDateString()}</span>
-              </div>
-            ))}
-          </div>
+          <HistoryView
+            attempts={stats.attempts}
+            behavioral={storage.getBehavioral()}
+            systemDesign={storage.getSystemDesign()}
+            readNotes={storage.getReadNotes()}
+          />
         )}
       </section>
+    </div>
+  );
+}
+
+function HistoryView({
+  attempts,
+  behavioral,
+  systemDesign,
+  readNotes,
+}: {
+  attempts: ReturnType<typeof storage.getAttempts>;
+  behavioral: ReturnType<typeof storage.getBehavioral>;
+  systemDesign: ReturnType<typeof storage.getSystemDesign>;
+  readNotes: ReturnType<typeof storage.getReadNotes>;
+}) {
+  type Item = {
+    kind: "dsa" | "behavioral" | "system-design" | "read";
+    date: number;
+    label: string;
+    detail: string;
+    emoji: string;
+    color: string;
+  };
+
+  const items: Item[] = [
+    ...attempts.map<Item>((a) => ({
+      kind: "dsa",
+      date: a.startedAt,
+      label: a.solved ? `✅ Solved ${a.problemId.replace(/-\d+$/, "")}` : `❌ Failed ${a.problemId.replace(/-\d+$/, "")}`,
+      detail: `${a.pattern.replace(/^\d+-/, "")} · ${a.difficulty} · ${a.retries} attempt${a.retries !== 1 ? "s" : ""}${a.hintsUsed ? ` · ${a.hintsUsed} hint${a.hintsUsed !== 1 ? "s" : ""}` : ""}`,
+      emoji: "💻",
+      color: a.solved ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400",
+    })),
+    ...behavioral.map<Item>((b) => ({
+      kind: "behavioral",
+      date: b.startedAt,
+      label: `🎤 Behavioral: ${b.question.slice(0, 50)}${b.question.length > 50 ? "..." : ""}`,
+      detail: `${Math.round(b.durationSec / 60)}min${b.selfRating ? ` · rated ${b.selfRating}/5` : ""}`,
+      emoji: "🎤",
+      color: "text-purple-600 dark:text-purple-400",
+    })),
+    ...systemDesign.map<Item>((s) => ({
+      kind: "system-design",
+      date: s.startedAt,
+      label: `🏗️ System Design: ${s.problemId.replace(/-\d+$/, "")}`,
+      detail: `${Math.round(s.durationSec / 60)}min${s.checklistScore ? ` · ${s.checklistScore}% on checklist` : ""}`,
+      emoji: "🏗️",
+      color: "text-blue-600 dark:text-blue-400",
+    })),
+    ...readNotes.map<Item>((r) => ({
+      kind: "read",
+      date: r.readAt,
+      label: `📖 Read: ${r.path.replace(/\.md$/, "").replace(/\//g, " › ")}`,
+      detail: "",
+      emoji: "📖",
+      color: "text-zinc-600 dark:text-zinc-400",
+    })),
+  ];
+
+  // Sort by date descending
+  items.sort((a, b) => b.date - a.date);
+
+  // Stats
+  const solved = attempts.filter((a) => a.solved).length;
+  const failed = attempts.filter((a) => !a.solved).length;
+
+  return (
+    <div>
+      {/* Summary */}
+      <div className="grid grid-cols-4 gap-3 mb-4">
+        <div className="p-3 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 text-center">
+          <div className="text-xs text-zinc-500">DSA Solved</div>
+          <div className="text-xl font-bold text-green-600 dark:text-green-400">{solved}</div>
+        </div>
+        <div className="p-3 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 text-center">
+          <div className="text-xs text-zinc-500">DSA Failed</div>
+          <div className="text-xl font-bold text-red-600 dark:text-red-400">{failed}</div>
+        </div>
+        <div className="p-3 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 text-center">
+          <div className="text-xs text-zinc-500">Behavioral</div>
+          <div className="text-xl font-bold text-purple-600 dark:text-purple-400">{behavioral.length}</div>
+        </div>
+        <div className="p-3 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 text-center">
+          <div className="text-xs text-zinc-500">Notes Read</div>
+          <div className="text-xl font-bold text-zinc-700 dark:text-zinc-300">{readNotes.length}</div>
+        </div>
+      </div>
+
+      {/* Timeline */}
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg divide-y divide-zinc-200 dark:divide-zinc-800 max-h-96 overflow-y-auto">
+        {items.length === 0 ? (
+          <div className="p-8 text-center text-zinc-500 text-sm">
+            No activity yet
+          </div>
+        ) : (
+          items.map((item, i) => (
+            <div key={i} className="p-3 text-sm flex justify-between items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <div className={`font-medium ${item.color}`}>{item.label}</div>
+                {item.detail && <div className="text-xs text-zinc-500 mt-0.5">{item.detail}</div>}
+              </div>
+              <div className="text-xs text-zinc-500 whitespace-nowrap">
+                {new Date(item.date).toLocaleDateString()}
+                <br />
+                {new Date(item.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }

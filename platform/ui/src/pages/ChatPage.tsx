@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 type Source = { path: string; similarity: number; snippet: string };
-type ChatResponse = { answer?: string; sources?: Source[]; sessionId?: string; error?: string };
+type ChatResponse = { answer?: string; sources?: Source[]; sessionId?: string; error?: string; provider?: string; model?: string };
 
 const SUGGESTED = [
   "What's the cache-aside pattern?",
@@ -16,6 +16,7 @@ export function ChatPage() {
   const [answer, setAnswer] = useState("");
   const [sources, setSources] = useState<Source[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [provider, setProvider] = useState<string>("");
 
   const ask = async (q?: string) => {
     const query = (q ?? question).trim();
@@ -28,10 +29,18 @@ export function ChatPage() {
     setSources([]);
 
     try {
+      // Get saved key + provider from localStorage (set in Settings)
+      const savedKey = (typeof window !== "undefined" ? localStorage.getItem("ai_api_key_v2") : null) || "";
+      const savedProvider = (typeof window !== "undefined" ? localStorage.getItem("ai_provider_v2") : null) || "groq";
+
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: query }),
+        body: JSON.stringify({
+          question: query,
+          apiKey: savedKey,
+          provider: savedProvider,
+        }),
       });
       const data = (await res.json()) as ChatResponse;
 
@@ -41,6 +50,7 @@ export function ChatPage() {
       }
       setAnswer(data.answer ?? "");
       setSources(data.sources ?? []);
+      setProvider(data.provider ?? savedProvider);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Network error");
     } finally {
@@ -48,12 +58,27 @@ export function ChatPage() {
     }
   };
 
+  // Check if user has a key configured
+  const hasKey = typeof window !== "undefined" && !!localStorage.getItem("ai_api_key_v2");
+
   return (
     <div className="min-h-full p-8 max-w-3xl mx-auto">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold">💬 Ask the Prep Assistant</h1>
-        <p className="text-zinc-500 mt-1">RAG over your prep notes. Powered by Gemini.</p>
+        <h1 className="text-3xl font-bold">�� Ask the Prep Assistant</h1>
+        <p className="text-zinc-500 mt-1">
+          {provider
+            ? `Powered by ${provider === "groq" ? "⚡ Groq" : "�� Gemini"} · ${provider}`
+            : "RAG over your prep notes"}
+        </p>
       </header>
+
+      {!hasKey && (
+        <div className="mb-6 p-4 border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 rounded-lg text-sm">
+          ⚙️ <strong>No API key configured.</strong> Add one in{" "}
+          <a href="/settings" className="text-blue-600 dark:text-blue-400 underline">Settings</a>{" "}
+          (recommend ⚡ Groq — free, 14,400 req/day).
+        </div>
+      )}
 
       <section className="mb-6">
         <div className="flex gap-2">
@@ -70,7 +95,14 @@ export function ChatPage() {
             {loading ? "..." : "Ask"}
           </button>
         </div>
-        {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">Error: {error}</p>}
+        {error && (
+          <p className="mt-3 text-sm text-red-600 dark:text-red-400">
+            Error: {error}
+            {error.includes("API key not valid") && (
+              <> · Get a key at <a href="/settings" className="underline">Settings</a></>
+            )}
+          </p>
+        )}
       </section>
 
       <section className="mb-8">
