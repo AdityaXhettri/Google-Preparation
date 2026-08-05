@@ -96,7 +96,14 @@ export type MCQ = {
 // Raw question bank. The exported MCQ_BANK below SHUFFLES each question's
 // options at module load so the correct answer is in a random position
 // (A/B/C/D) — not always B. This prevents the "every answer is B" feeling.
-const MCQ_RAW: Omit<MCQ, "options" | "correctIndex"> & { correct: string }[] = [
+const MCQ_RAW: {
+  id: string;
+  category: "DSA" | "System Design" | "Behavioral";
+  question: string;
+  correct: string;
+  wrong: string[];
+  explanation: string;
+}[] = [
   // DSA
   { id: "mcq-1", category: "DSA", question: "Which pattern is best for 'find longest substring without repeating characters'?", correct: "Sliding Window", wrong: ["Two Pointers", "Dynamic Programming", "Cyclic Sort"], explanation: "Sliding Window with a Map tracking last-seen positions. Right pointer expands, left jumps past duplicates." },
   { id: "mcq-2", category: "DSA", question: "Two Sum on a SORTED array — what's the optimal approach?", correct: "Two pointers O(n)", wrong: ["Hash map O(n)", "Binary search O(n log n)", "Brute force O(n²)"], explanation: "Sorted array + O(n) time → two pointers from both ends. Move pointer based on whether sum is too big or too small." },

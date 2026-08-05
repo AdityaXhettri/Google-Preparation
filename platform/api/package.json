@@ -10,5 +10,8 @@
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
     "hono": "^4.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2"
   }
 }

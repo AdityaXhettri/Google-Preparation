@@ -31,8 +31,6 @@ const GEMINI_KEY = process.env.GEMINI_API_KEY;
 
 // ---- Gemini setup ----
 const genAI = GEMINI_KEY ? new GoogleGenerativeAI(GEMINI_KEY) : null;
-const chatModel = null; // unused — each endpoint creates its own model
-
 const app = new Hono();
 
 app.use("*", cors({
@@ -62,7 +60,7 @@ app.get("/api/test-models", async (c) => {
 
   for (const model of models) {
     try {
-      const result = await testGenAI.getGenerativeModel({ model })
+      await testGenAI.getGenerativeModel({ model })
         .generateContent("OK");
       results[model] = { ok: true };
     } catch (e) {
@@ -288,6 +286,7 @@ app.post("/api/hint", async (c) => {
       userQuestion?: string;
       history?: { role: "user" | "assistant"; content: string }[];
       apiKey?: string;
+      provider?: string;
     } | null;
 
     if (!body?.problemTitle || !body?.userQuestion) {
@@ -300,7 +299,6 @@ app.post("/api/hint", async (c) => {
     if (!activeKey) {
       return c.json({ error: "No API key. Set GEMINI_API_KEY in .env or paste it in the app's Settings page." }, 500);
     }
-    const activeGenAI = new GoogleGenerativeAI(activeKey);
 
     // SAFETY 1: Cap user question to 500 chars (prevents token abuse)
     let userQuestion = body.userQuestion.trim();
