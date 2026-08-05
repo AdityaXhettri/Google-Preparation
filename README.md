@@ -191,11 +191,31 @@ platform/
 
 ## How to Run
 
-### Prerequisites
-- Node.js 18+
-- Bun (https://bun.sh)
+### �� One-Click Start (Easiest — No Terminal Needed)
 
-### Start the Frontend
+For non-technical users, just **double-click** these files:
+
+| File | What it does |
+|---|---|
+| **`control.bat`** | Opens a control panel with START / STOP / Browser / Status buttons |
+| **`start.bat`** | Starts the app and opens browser |
+| **`stop.bat`** | Stops the app |
+
+**Steps:**
+1. Double-click `control.bat`
+2. Press `1` to start
+3. Browser opens automatically at `http://localhost:5173`
+4. When done, press `2` to stop
+
+> ✅ No need to type any commands in the terminal!
+
+### Prerequisites
+- Node.js 18+ (download from https://nodejs.org/)
+- Bun (optional, for AI features — https://bun.sh)
+
+### Manual Start (For Developers)
+
+**Start the Frontend:**
 ```bash
 cd platform/ui
 npm install
@@ -203,7 +223,7 @@ npm run dev
 ```
 Opens at http://localhost:5173
 
-### Start the Backend (Optional, for AI features)
+**Start the Backend (Optional, for AI features):**
 ```bash
 cd platform/api
 bun install
