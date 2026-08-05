@@ -200,6 +200,7 @@ For non-technical users, just **double-click** these files:
 | **`control.bat`** | Opens a control panel with START / STOP / Browser / Status buttons |
 | **`start.bat`** | Starts the app and opens browser |
 | **`stop.bat`** | Stops the app |
+| **`create-zip.bat`** | Creates a SMALL zip (under 5MB) for sharing |
 
 **Steps:**
 1. Double-click `control.bat`
