@@ -391,7 +391,9 @@ If you see a **blank page** or an **error**:
 
 ---
 
+## License
 
+Personal project. Built for learning.
 
 ---
 
