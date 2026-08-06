@@ -62,6 +62,11 @@ function removeDuplicates(arr: number[]): number {
 
 For sorted arrays: the comparison tells you which pointer to move. Sum too small → move left up. Sum too big → move right down. This is what makes it O(n) instead of O(n²).
 
+## Common pitfalls
+
+1. **Same direction (slow/fast) vs opposite ends** — pick the wrong one and the algorithm fails. Container With Most Water = opposite ends. Remove Duplicates = same direction.
+2. **Sorting first** — most two-pointer problems need sorted input. If not given, sort first (adds O(n log n)).
+3. **Skip duplicates** in 3Sum/4Sum — when moving pointers, skip equal values to avoid duplicate triplets.
 
 
 ## Practice problems (in order)
