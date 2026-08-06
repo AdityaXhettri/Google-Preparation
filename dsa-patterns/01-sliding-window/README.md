@@ -68,10 +68,7 @@ The total time is O(n) because each element is added to the window once (when `r
 2. **Forgetting to shrink**: always check if window is invalid after adding `arr[right]`.
 3. **Wrong order**: add first, shrink second, then update answer. Reversing these breaks the invariant.
 
-## Related patterns
 
-- **Two Pointers** — same idea but pointers move based on different logic
-- **Prefix Sum + Hashmap** — alternative for "subarray sum equals K" type problems
 
 ## Practice problems (in order of difficulty)
 
