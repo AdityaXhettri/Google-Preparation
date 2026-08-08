@@ -396,4 +396,8 @@ If you see a **blank page** or an **error**:
 Personal project. Built for learning.
 
 ---
+**Author:** [Aditya Chettri]
+**Purpose:** Google L4 Interview Preparation
+**Built with:** Vite + React + Bun + Hono
+**Impact:** Free, private, offline-capable interview prep for the next generation of engineers
 
