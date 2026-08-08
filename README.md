@@ -380,6 +380,14 @@ If you see a **blank page** or an **error**:
 
 ---
 
+## Security Notes
+
+- **No server-side database** — All user data lives in the browser
+- **AI keys are stored in localStorage** — never sent to any server except the local Bun API
+- **Code runs in Web Workers** — can't access the DOM or main thread
+- **2-second execution timeout** — prevents infinite loops
+- **No tracking, no analytics** — completely private
+
 
 ---
 
