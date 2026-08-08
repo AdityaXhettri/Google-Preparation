@@ -405,4 +405,3 @@ Personal project. Built for learning.
 
 
 **Impact:** Free, private, offline-capable interview prep for the next generation of engineers
-
