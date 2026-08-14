@@ -380,7 +380,6 @@ If you see a **blank page** or an **error**:
 
 ---
 
-
 ## Security Notes
 
 - **No server-side database** — All user data lives in the browser
@@ -389,6 +388,7 @@ If you see a **blank page** or an **error**:
 - **2-second execution timeout** — prevents infinite loops
 - **No tracking, no analytics** — completely private
 
+
 ---
 
 ## License
@@ -396,8 +396,11 @@ If you see a **blank page** or an **error**:
 Personal project. Built for learning.
 
 ---
-
 **Author:** [Aditya Chettri]
 **Purpose:** Google L4 Interview Preparation
 **Built with:** Vite + React + Bun + Hono
+
+
+
+
 **Impact:** Free, private, offline-capable interview prep for the next generation of engineers
