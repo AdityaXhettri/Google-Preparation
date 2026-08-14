@@ -7,7 +7,7 @@ import { getBestAnswer } from "../lib/hintBank";
 
 const Editor = lazy(() => import("@monaco-editor/react").then((m) => ({ default: m.default })));
 
-const TIME_LIMITS: Record<Problem["difficulty"], number> = { easy: 15, medium: 25, hard: 40 };
+const TIME_LIMITS: Rectord<Problem["difficulty"], number> = { easy: 15, medium: 25, hard: 40 };
 
 function fmt(sec: number) {
   const m = Math.floor(sec / 60);
@@ -522,7 +522,7 @@ function HintChat({ problem, onClose, cooldown, setCooldown, tokensToday, setTok
           content:
             "⚙️ **API not reachable** — using offline hint mode.\n\n" +
             offlineHint +
-            "\n\n---\n\n💡 To enable the AI tutor: start the Bun API on port 3001 (`cd platform/api && bun run dev`) and add a Gemini key to `.env`.",
+            "\n\n---\n\n💡 To enable the AI tutor: start the Bun API on port 3001 (`cd platform/api && bun run dev`) and add a Groq/Gemini key to ⚙️ Settings in the app.",
         },
       ]);
     } finally {
