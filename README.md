@@ -191,22 +191,27 @@ platform/
 
 ## How to Run
 
-### �� One-Click Start (Easiest — No Terminal Needed)
+### 🚀 One-Click Start (Easiest — No Terminal Needed)
 
 For non-technical users, just **double-click** these files:
 
 | File | What it does |
 |---|---|
-| **`control.bat`** | Opens a control panel with START / STOP / Browser / Status buttons |
-| **`start.bat`** | Starts the app and opens browser |
+| **`start.bat`** | Starts the app and opens browser in Edge |
 | **`stop.bat`** | Stops the app |
+| **`install.bat`** | First-time install only (downloads dependencies) |
+| **`open-browser.bat`** | Just opens Edge at localhost:5173 |
 | **`create-zip.bat`** | Creates a SMALL zip (under 5MB) for sharing |
 
-**Steps:**
-1. Double-click `control.bat`
-2. Press `1` to start
-3. Browser opens automatically at `http://localhost:5173`
-4. When done, press `2` to stop
+**Steps (first time):**
+1. Install **Python 3.10+** from https://python.org/ (tick "Add to PATH")
+2. Install **Node.js 18+** from https://nodejs.org/
+3. Double-click `install.bat` — downloads dependencies (~3 min)
+4. Double-click `start.bat` — opens app in Edge at http://localhost:5173
+
+**Steps (after first install):**
+1. Double-click `start.bat`
+2. Browser opens automatically
 
 > ✅ No need to type any commands in the terminal!
 
@@ -223,10 +228,11 @@ If you prefer typing commands (or the one-click buttons don't work for some reas
 | Tool | Download Link | Why you need it |
 |---|---|---|
 | **Node.js 18+** | https://nodejs.org/ | Runs the frontend |
+| **Python 3.10+** | https://python.org/ | Runs the launcher script |
 | **Bun** (optional) | https://bun.sh/ | Runs the backend (for AI features) |
 | **Git** (optional) | https://git-scm.com/ | To clone or version-control the project |
 
-After installing Node.js, **close and reopen** your terminal so it picks up the new commands.
+After installing Node.js and Python, **close and reopen** your terminal so it picks up the new commands. Make sure to tick **"Add to PATH"** when installing Python.
 
 ---
 

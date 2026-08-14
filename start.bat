@@ -1,72 +1,53 @@
 @echo off
-setlocal enableextensions
-title Google L4 Interview Prep Platform
-color 0A
+REM ============================================================
+REM  Google L4 Interview Prep — one-click launcher
+REM
+REM  Flow:
+REM    1. Find Python on PATH
+REM    2. Run launcher.py in THIS window (see progress live)
+REM    3. Launcher spawns UI + backend in their own console windows
+REM    4. Launcher opens Edge when 5173 is reachable
+REM    5. This window waits until you press Enter, then exits
+REM       (The server windows stay open)
+REM ============================================================
+
+title Google L4 Interview Prep - Launcher
+color 0B
+
+cd /d "%~dp0"
+
 echo.
-echo ============================================
-echo   Google L4 Interview Prep Platform
-echo ============================================
+echo ============================================================
+echo   Google L4 Interview Prep
+echo ============================================================
 echo.
 
-:: Check if Node.js is installed
-where node >nul 2>&1
+where python >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] Node.js is not installed!
-    echo Please download it from: https://nodejs.org/
+    echo [ERROR] Python is not on PATH. Install Python 3.10+
+    echo         from https://python.org and tick "Add to PATH".
+    echo.
     pause
     exit /b 1
 )
 
-echo [OK] Node.js found
+echo [start.bat] using Python: 
+where python
 echo.
 
-:: Install UI dependencies if needed
-if not exist "platform\ui\node_modules" (
-    echo [1/3] Installing frontend dependencies... this may take 1-3 minutes
-    cd platform\ui
-    call npm install
-    if errorlevel 1 (
-        echo [ERROR] npm install failed!
-        cd ..\..
-        pause
-        exit /b 1
-    )
-    cd ..\..
-    echo [OK] Frontend dependencies installed.
-) else (
-    echo [1/3] Frontend dependencies already installed.
+python launcher.py
+set "RC=%ERRORLEVEL%"
+
+if not "%RC%"=="0" (
+    echo.
+    echo [start.bat] launcher exited with code %RC%.
+    echo.
 )
 
-:: Check if Bun is installed for backend
-where bun >nul 2>&1
-if errorlevel 1 (
-    echo [2/3] Bun not installed. Skipping backend.
-    echo       The frontend will work without AI tutor.
-    goto :start_frontend
-)
-
-echo [2/3] Bun found. Starting backend on http://localhost:3001 ...
-
-:: Start the API in a separate window
-cd platform\api
-start "API Server - Google Prep" cmd /c "bun run dev"
-cd ..\..
-
-:: Give the backend a moment to start
-timeout /t 3 /nobreak >nul
-
-:start_frontend
 echo.
-echo [3/3] Starting frontend on http://localhost:5173 ...
+echo ============================================================
+echo   Done. You can close this window (servers keep running).
+echo ============================================================
 echo.
-echo ============================================
-echo   App is starting!
-echo   Open: http://localhost:5173
-echo.
-echo   To STOP: Close this window or run stop.bat
-echo ============================================
-echo.
-
-cd platform\ui
-call npm run dev
-endlocal
+pause
+exit /b %RC%

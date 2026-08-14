@@ -1,35 +1,29 @@
 @echo off
-setlocal enableextensions
-title Stop Google L4 Interview Prep
-color 0C
-echo.
-echo ============================================
-echo   Stopping Google L4 Interview Prep
-echo ============================================
-echo.
+REM Google L4 Interview Prep - stop everything
+title Google L4 Interview Prep - Stopper
+cd /d "%~dp0"
 
-:: Kill Vite (frontend on port 5173)
-echo Stopping frontend on port 5173...
+where python >nul 2>&1
+if errorlevel 1 (
+    echo Python not on PATH. Trying fallback...
+    goto :fallback
+)
+
+python launcher.py stop
+goto :end
+
+:fallback
+:: Fallback if Python isn't installed - use netstat directly
+echo Stopping servers on ports 5173 and 3001...
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr :5173 ^| findstr LISTENING 2^>nul') do (
-    echo   - Killing PID %%a
+    echo Killing PID %%a on port 5173
     taskkill /F /PID %%a >nul 2>&1
 )
-
-:: Kill Bun (backend on port 3001)
-echo Stopping backend on port 3001...
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr :3001 ^| findstr LISTENING 2^>nul') do (
-    echo   - Killing PID %%a
+    echo Killing PID %%a on port 3001
     taskkill /F /PID %%a >nul 2>&1
 )
+echo Done.
 
-:: Kill any lingering "API Server" window
-echo Killing any API Server windows...
-taskkill /F /FI "WINDOWTITLE eq API Server - Google Prep*" >nul 2>&1
-
-echo.
-echo ============================================
-echo   All servers stopped!
-echo ============================================
-echo.
+:end
 pause
-endlocal
