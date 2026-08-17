@@ -19,7 +19,6 @@
 
 
 
-
 # Google L4 Interview Prep Platform
 
 A complete, self-hosted web application for preparing for Google L4 Software Engineer interviews. Built with **Vite + React + TypeScript** on the frontend and **Bun + Hono** on the backend.
